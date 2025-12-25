@@ -22,7 +22,7 @@ const colorClasses = {
 
 export default function StatCard({ title, value, icon, trend, color = 'primary' }: StatCardProps) {
   return (
-    <Card hover className="animate-fade-in">
+    <Card className="animate-fade-in hover:shadow-lg transition-shadow duration-200">
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div>
