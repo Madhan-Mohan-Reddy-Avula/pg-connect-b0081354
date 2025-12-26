@@ -106,7 +106,6 @@ export default function PGSetup() {
 
     try {
       if (pgData.id) {
-        // Update existing PG
         const { error } = await supabase
           .from('pgs')
           .update({
@@ -126,7 +125,6 @@ export default function PGSetup() {
           description: 'Your PG details have been updated successfully.',
         });
       } else {
-        // Create new PG
         const { data, error } = await supabase
           .from('pgs')
           .insert({
@@ -166,7 +164,7 @@ export default function PGSetup() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <Loader2 className="h-8 w-8 animate-spin text-foreground" />
         </div>
       </DashboardLayout>
     );
@@ -174,9 +172,9 @@ export default function PGSetup() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+      <div className="max-w-2xl mx-auto space-y-6 animate-fade-in pb-24">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold">
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
             {pgData.id ? 'Edit PG Details' : 'Set Up Your PG'}
           </h1>
           <p className="text-muted-foreground">
@@ -186,15 +184,15 @@ export default function PGSetup() {
           </p>
         </div>
 
-        <Card>
+        <Card className="premium-card">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-foreground" />
               </div>
               <div>
-                <CardTitle>PG Information</CardTitle>
-                <CardDescription>Basic details about your paying guest accommodation</CardDescription>
+                <CardTitle className="text-foreground">PG Information</CardTitle>
+                <CardDescription className="text-muted-foreground">Basic details about your paying guest accommodation</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -202,32 +200,34 @@ export default function PGSetup() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">PG Name *</Label>
+                  <Label htmlFor="name" className="text-foreground">PG Name *</Label>
                   <Input
                     id="name"
                     name="name"
                     placeholder="e.g., Sunrise PG"
                     value={pgData.name}
                     onChange={handleChange}
+                    className="bg-secondary/50 border-border"
                   />
                   {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="city">City *</Label>
+                  <Label htmlFor="city" className="text-foreground">City *</Label>
                   <Input
                     id="city"
                     name="city"
                     placeholder="e.g., Bangalore"
                     value={pgData.city}
                     onChange={handleChange}
+                    className="bg-secondary/50 border-border"
                   />
                   {errors.city && <p className="text-sm text-destructive">{errors.city}</p>}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address">Full Address *</Label>
+                <Label htmlFor="address" className="text-foreground">Full Address *</Label>
                 <Textarea
                   id="address"
                   name="address"
@@ -235,38 +235,41 @@ export default function PGSetup() {
                   value={pgData.address}
                   onChange={handleChange}
                   rows={2}
+                  className="bg-secondary/50 border-border"
                 />
                 {errors.address && <p className="text-sm text-destructive">{errors.address}</p>}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="owner_name">Owner Name *</Label>
+                  <Label htmlFor="owner_name" className="text-foreground">Owner Name *</Label>
                   <Input
                     id="owner_name"
                     name="owner_name"
                     placeholder="Your full name"
                     value={pgData.owner_name}
                     onChange={handleChange}
+                    className="bg-secondary/50 border-border"
                   />
                   {errors.owner_name && <p className="text-sm text-destructive">{errors.owner_name}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="contact_number">Contact Number *</Label>
+                  <Label htmlFor="contact_number" className="text-foreground">Contact Number *</Label>
                   <Input
                     id="contact_number"
                     name="contact_number"
                     placeholder="e.g., 9876543210"
                     value={pgData.contact_number}
                     onChange={handleChange}
+                    className="bg-secondary/50 border-border"
                   />
                   {errors.contact_number && <p className="text-sm text-destructive">{errors.contact_number}</p>}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="house_rules">House Rules</Label>
+                <Label htmlFor="house_rules" className="text-foreground">House Rules</Label>
                 <Textarea
                   id="house_rules"
                   name="house_rules"
@@ -274,11 +277,12 @@ export default function PGSetup() {
                   value={pgData.house_rules}
                   onChange={handleChange}
                   rows={4}
+                  className="bg-secondary/50 border-border"
                 />
                 {errors.house_rules && <p className="text-sm text-destructive">{errors.house_rules}</p>}
               </div>
 
-              <Button type="submit" className="w-full" disabled={saving}>
+              <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90" disabled={saving}>
                 {saving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

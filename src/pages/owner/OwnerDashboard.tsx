@@ -14,9 +14,11 @@ import {
   Plus,
   AlertCircle,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  TrendingDown
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { format } from 'date-fns';
 
 interface DashboardStats {
   totalRooms: number;
@@ -25,6 +27,8 @@ interface DashboardStats {
   activeGuests: number;
   pendingRents: number;
   openComplaints: number;
+  monthlyExpenses: number;
+  monthlyCollected: number;
 }
 
 interface RecentGuest {
@@ -37,7 +41,7 @@ interface RecentGuest {
 export default function OwnerDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
-    totalRooms: 0, totalBeds: 0, occupiedBeds: 0, activeGuests: 0, pendingRents: 0, openComplaints: 0,
+    totalRooms: 0, totalBeds: 0, occupiedBeds: 0, activeGuests: 0, pendingRents: 0, openComplaints: 0, monthlyExpenses: 0, monthlyCollected: 0,
   });
   const [recentGuests, setRecentGuests] = useState<RecentGuest[]>([]);
   const [hasPG, setHasPG] = useState<boolean | null>(null);
@@ -53,6 +57,10 @@ export default function OwnerDashboard() {
       setHasPG(!!pgData);
       if (!pgData) { setLoading(false); return; }
 
+      const currentMonth = format(new Date(), 'yyyy-MM');
+      const monthStart = `${currentMonth}-01`;
+      const monthEnd = `${currentMonth}-31`;
+
       const { count: roomsCount } = await supabase.from('rooms').select('*', { count: 'exact', head: true }).eq('pg_id', pgData.id);
       const { data: bedsData } = await supabase.from('beds').select('id, is_occupied, room_id, rooms!inner(pg_id)').eq('rooms.pg_id', pgData.id);
       const totalBeds = bedsData?.length || 0;
@@ -60,8 +68,16 @@ export default function OwnerDashboard() {
       const { data: guestsData } = await supabase.from('guests').select('id, full_name, status, check_in_date').eq('pg_id', pgData.id).eq('status', 'active').order('created_at', { ascending: false }).limit(5);
       const { count: pendingRents } = await supabase.from('rents').select('*, guests!inner(pg_id)', { count: 'exact', head: true }).eq('guests.pg_id', pgData.id).eq('status', 'pending');
       const { count: openComplaints } = await supabase.from('complaints').select('*', { count: 'exact', head: true }).eq('pg_id', pgData.id).eq('status', 'open');
+      
+      // Fetch monthly expenses
+      const { data: expensesData } = await supabase.from('expenses').select('amount').eq('pg_id', pgData.id).gte('expense_month', monthStart).lte('expense_month', monthEnd);
+      const monthlyExpenses = expensesData?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+      
+      // Fetch monthly rent collected
+      const { data: rentsData } = await supabase.from('rents').select('amount, guests!inner(pg_id)').eq('guests.pg_id', pgData.id).eq('status', 'paid').gte('month', monthStart).lte('month', monthEnd);
+      const monthlyCollected = rentsData?.reduce((sum, r) => sum + Number(r.amount), 0) || 0;
 
-      setStats({ totalRooms: roomsCount || 0, totalBeds, occupiedBeds, activeGuests: guestsData?.length || 0, pendingRents: pendingRents || 0, openComplaints: openComplaints || 0 });
+      setStats({ totalRooms: roomsCount || 0, totalBeds, occupiedBeds, activeGuests: guestsData?.length || 0, pendingRents: pendingRents || 0, openComplaints: openComplaints || 0, monthlyExpenses, monthlyCollected });
       setRecentGuests(guestsData || []);
     } catch (error) {
       console.error('Error:', error);
@@ -105,11 +121,45 @@ export default function OwnerDashboard() {
           <p className="text-muted-foreground">Your PG at a glance</p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           <StatCard title="Total Rooms" value={stats.totalRooms} icon={<Home className="w-6 h-6" />} color="primary" />
-          <StatCard title="Total Beds" value={stats.totalBeds} icon={<BedDouble className="w-6 h-6" />} color="info" />
-          <StatCard title="Occupied" value={`${stats.occupiedBeds}/${stats.totalBeds}`} icon={<BedDouble className="w-6 h-6" />} color="success" />
+          <StatCard title="Occupied Beds" value={`${stats.occupiedBeds}/${stats.totalBeds}`} icon={<BedDouble className="w-6 h-6" />} color="success" />
           <StatCard title="Active Guests" value={stats.activeGuests} icon={<Users className="w-6 h-6" />} color="accent" />
+        </div>
+
+        {/* Monthly Financial Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card className="premium-card">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                  <Receipt className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">This Month Collected</p>
+                  <p className="text-2xl font-bold">₹{stats.monthlyCollected.toLocaleString()}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="premium-card">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                    <TrendingDown className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">This Month Expenses</p>
+                    <p className="text-2xl font-bold">₹{stats.monthlyExpenses.toLocaleString()}</p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/owner/expenses">View</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {(stats.pendingRents > 0 || stats.openComplaints > 0) && (

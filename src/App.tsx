@@ -16,6 +16,7 @@ import RentTracking from "./pages/owner/RentTracking";
 import UPISettings from "./pages/owner/UPISettings";
 import PaymentVerification from "./pages/owner/PaymentVerification";
 import OwnerComplaints from "./pages/owner/OwnerComplaints";
+import ExpensesManagement from "./pages/owner/ExpensesManagement";
 import GuestDashboard from "./pages/guest/GuestDashboard";
 import GuestProfile from "./pages/guest/GuestProfile";
 import PayRent from "./pages/guest/PayRent";
@@ -79,6 +80,7 @@ function AppRoutes() {
       <Route path="/owner/upi" element={<ProtectedRoute allowedRole="owner"><UPISettings /></ProtectedRoute>} />
       <Route path="/owner/payments" element={<ProtectedRoute allowedRole="owner"><PaymentVerification /></ProtectedRoute>} />
       <Route path="/owner/complaints" element={<ProtectedRoute allowedRole="owner"><OwnerComplaints /></ProtectedRoute>} />
+      <Route path="/owner/expenses" element={<ProtectedRoute allowedRole="owner"><ExpensesManagement /></ProtectedRoute>} />
       
       {/* Guest Routes */}
       <Route path="/guest" element={<ProtectedRoute allowedRole="guest"><GuestDashboard /></ProtectedRoute>} />

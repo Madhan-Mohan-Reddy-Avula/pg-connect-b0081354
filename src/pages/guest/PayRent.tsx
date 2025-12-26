@@ -17,6 +17,7 @@ interface Payment {
   id: string;
   amount: number;
   payment_purpose: string;
+  payment_month: string | null;
   upi_transaction_id: string;
   screenshot_url: string | null;
   status: string;
@@ -29,6 +30,7 @@ const PayRent = () => {
   const queryClient = useQueryClient();
   const [amount, setAmount] = useState("");
   const [purpose, setPurpose] = useState("rent");
+  const [paymentMonth, setPaymentMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [transactionId, setTransactionId] = useState("");
   const [screenshotUrl, setScreenshotUrl] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -92,6 +94,7 @@ const PayRent = () => {
         pg_id: guestData.pg.id,
         amount: parseFloat(amount),
         payment_purpose: purpose,
+        payment_month: `${paymentMonth}-01`,
         upi_transaction_id: transactionId.trim(),
         screenshot_url: screenshotUrl || null,
       });
@@ -108,6 +111,7 @@ const PayRent = () => {
       setTransactionId("");
       setScreenshotUrl("");
       setPurpose("rent");
+      setPaymentMonth(format(new Date(), 'yyyy-MM'));
     },
     onError: (error: any) => {
       toast({
@@ -309,6 +313,16 @@ const PayRent = () => {
               </div>
 
               <div className="space-y-2">
+                <Label className="text-muted-foreground text-sm">Payment For Month</Label>
+                <Input
+                  type="month"
+                  value={paymentMonth}
+                  onChange={(e) => setPaymentMonth(e.target.value)}
+                  className="bg-muted/50 border-border/50 focus:border-foreground/50 text-foreground"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label className="text-muted-foreground text-sm">Amount (₹)</Label>
                 <Input
                   type="number"
@@ -427,6 +441,11 @@ const PayRent = () => {
                           <span className="text-muted-foreground">•</span>
                           <span className="text-sm text-muted-foreground capitalize">{payment.payment_purpose}</span>
                         </div>
+                        {payment.payment_month && (
+                          <p className="text-xs text-muted-foreground">
+                            For: {format(new Date(payment.payment_month), "MMMM yyyy")}
+                          </p>
+                        )}
                         <p className="text-xs text-muted-foreground font-mono">
                           ID: {payment.upi_transaction_id}
                         </p>

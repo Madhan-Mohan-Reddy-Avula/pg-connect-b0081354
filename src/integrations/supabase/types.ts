@@ -126,6 +126,50 @@ export type Database = {
           },
         ]
       }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string | null
+          expense_month: string
+          id: string
+          pg_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          expense_month: string
+          id?: string
+          pg_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          expense_month?: string
+          id?: string
+          pg_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_pg_id_fkey"
+            columns: ["pg_id"]
+            isOneToOne: false
+            referencedRelation: "pgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guests: {
         Row: {
           bed_id: string | null
@@ -198,6 +242,7 @@ export type Database = {
           created_at: string
           guest_id: string
           id: string
+          payment_month: string | null
           payment_purpose: string
           pg_id: string
           rejection_reason: string | null
@@ -213,6 +258,7 @@ export type Database = {
           created_at?: string
           guest_id: string
           id?: string
+          payment_month?: string | null
           payment_purpose?: string
           pg_id: string
           rejection_reason?: string | null
@@ -228,6 +274,7 @@ export type Database = {
           created_at?: string
           guest_id?: string
           id?: string
+          payment_month?: string | null
           payment_purpose?: string
           pg_id?: string
           rejection_reason?: string | null
