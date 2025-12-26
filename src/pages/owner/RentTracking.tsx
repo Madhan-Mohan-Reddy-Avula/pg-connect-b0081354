@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,7 +41,6 @@ export default function RentTracking() {
     month: format(new Date(), 'yyyy-MM'),
   });
 
-  // Fetch owner's PG
   const { data: pg } = useQuery({
     queryKey: ['owner-pg', user?.id],
     queryFn: async () => {
@@ -56,7 +55,6 @@ export default function RentTracking() {
     enabled: !!user?.id,
   });
 
-  // Fetch active guests
   const { data: guests } = useQuery({
     queryKey: ['active-guests', pg?.id],
     queryFn: async () => {
@@ -71,7 +69,6 @@ export default function RentTracking() {
     enabled: !!pg?.id,
   });
 
-  // Fetch rents
   const { data: rents, isLoading } = useQuery({
     queryKey: ['rents', pg?.id],
     queryFn: async () => {
@@ -85,7 +82,6 @@ export default function RentTracking() {
     enabled: !!pg?.id,
   });
 
-  // Add rent entry mutation
   const addRentMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const { error } = await supabase.from('rents').insert({
@@ -107,7 +103,6 @@ export default function RentTracking() {
     },
   });
 
-  // Mark as paid mutation
   const markPaidMutation = useMutation({
     mutationFn: async (rentId: string) => {
       const { error } = await supabase
@@ -128,7 +123,6 @@ export default function RentTracking() {
     },
   });
 
-  // Mark as pending mutation
   const markPendingMutation = useMutation({
     mutationFn: async (rentId: string) => {
       const { error } = await supabase
@@ -187,7 +181,7 @@ export default function RentTracking() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-24">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Rent Tracking</h1>
@@ -195,12 +189,12 @@ export default function RentTracking() {
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => resetForm()}>
+              <Button onClick={() => resetForm()} className="bg-foreground text-background hover:bg-foreground/90">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Rent Entry
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="bg-card border-border">
               <DialogHeader>
                 <DialogTitle>Add Rent Entry</DialogTitle>
               </DialogHeader>
@@ -208,10 +202,10 @@ export default function RentTracking() {
                 <div className="space-y-2">
                   <Label htmlFor="guest_id">Select Guest</Label>
                   <Select value={formData.guest_id} onValueChange={handleGuestChange}>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-secondary/50 border-border">
                       <SelectValue placeholder="Select a guest" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-card border-border">
                       {guests?.map((guest) => (
                         <SelectItem key={guest.id} value={guest.id}>
                           {guest.full_name} (₹{guest.monthly_rent}/mo)
@@ -227,6 +221,7 @@ export default function RentTracking() {
                     type="month"
                     value={formData.month}
                     onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+                    className="bg-secondary/50 border-border"
                     required
                   />
                 </div>
@@ -238,6 +233,7 @@ export default function RentTracking() {
                     min={0}
                     value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: parseInt(e.target.value) || 0 })}
+                    className="bg-secondary/50 border-border"
                     required
                   />
                 </div>
@@ -245,7 +241,7 @@ export default function RentTracking() {
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" className="flex-1" disabled={addRentMutation.isPending || !formData.guest_id}>
+                  <Button type="submit" className="flex-1 bg-foreground text-background hover:bg-foreground/90" disabled={addRentMutation.isPending || !formData.guest_id}>
                     Add Entry
                   </Button>
                 </div>
@@ -256,11 +252,11 @@ export default function RentTracking() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card>
+          <Card className="premium-card">
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-warning" />
+                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-muted-foreground" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Pending</p>
@@ -269,11 +265,11 @@ export default function RentTracking() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="premium-card">
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
-                  <Check className="w-6 h-6 text-success" />
+                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                  <Check className="w-6 h-6 text-muted-foreground" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Paid</p>
@@ -282,11 +278,11 @@ export default function RentTracking() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="premium-card">
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
-                  <IndianRupee className="w-6 h-6 text-destructive" />
+                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                  <IndianRupee className="w-6 h-6 text-muted-foreground" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Pending</p>
@@ -309,12 +305,12 @@ export default function RentTracking() {
             ))}
           </div>
         ) : rents?.length === 0 ? (
-          <Card>
+          <Card className="premium-card">
             <CardContent className="py-12 text-center">
               <Receipt className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No rent entries yet</h3>
               <p className="text-muted-foreground mb-4">Add your first rent entry to start tracking</p>
-              <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
+              <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} className="bg-foreground text-background hover:bg-foreground/90">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Rent Entry
               </Button>
@@ -323,12 +319,12 @@ export default function RentTracking() {
         ) : (
           <div className="space-y-3">
             {rents?.map((rent) => (
-              <Card key={rent.id} className="hover:shadow-md transition-shadow">
+              <Card key={rent.id} className="premium-card">
                 <CardContent className="p-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="w-5 h-5 text-primary" />
+                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                        <User className="w-5 h-5 text-muted-foreground" />
                       </div>
                       <div>
                         <p className="font-medium">{rent.guest?.full_name}</p>
@@ -354,6 +350,7 @@ export default function RentTracking() {
                           size="sm"
                           onClick={() => markPaidMutation.mutate(rent.id)}
                           disabled={markPaidMutation.isPending}
+                          className="bg-foreground text-background hover:bg-foreground/90"
                         >
                           Mark Paid
                         </Button>

@@ -47,7 +47,6 @@ export default function GuestsManagement() {
     emergency_contact: '',
   });
 
-  // Fetch owner's PG
   const { data: pg } = useQuery({
     queryKey: ['owner-pg', user?.id],
     queryFn: async () => {
@@ -62,7 +61,6 @@ export default function GuestsManagement() {
     enabled: !!user?.id,
   });
 
-  // Fetch guests
   const { data: guests, isLoading } = useQuery({
     queryKey: ['guests', pg?.id],
     queryFn: async () => {
@@ -77,7 +75,6 @@ export default function GuestsManagement() {
     enabled: !!pg?.id,
   });
 
-  // Fetch available beds
   const { data: beds } = useQuery({
     queryKey: ['available-beds', pg?.id],
     queryFn: async () => {
@@ -92,11 +89,9 @@ export default function GuestsManagement() {
     enabled: !!pg?.id,
   });
 
-  // Add guest mutation
   const addGuestMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      // Create a temporary user for the guest (in real app, guest would sign up)
-      const guestUserId = user!.id; // Using owner's ID temporarily for demo
+      const guestUserId = user!.id;
 
       const { data: guest, error } = await supabase
         .from('guests')
@@ -117,7 +112,6 @@ export default function GuestsManagement() {
 
       if (error) throw error;
 
-      // Update bed occupancy if assigned
       if (data.bed_id) {
         await supabase.from('beds').update({ is_occupied: true }).eq('id', data.bed_id);
       }
@@ -136,7 +130,6 @@ export default function GuestsManagement() {
     },
   });
 
-  // Update guest mutation
   const updateGuestMutation = useMutation({
     mutationFn: async (data: typeof formData & { id: string; oldBedId: string | null }) => {
       const { error } = await supabase
@@ -153,7 +146,6 @@ export default function GuestsManagement() {
 
       if (error) throw error;
 
-      // Update bed occupancy
       if (data.oldBedId && data.oldBedId !== data.bed_id) {
         await supabase.from('beds').update({ is_occupied: false }).eq('id', data.oldBedId);
       }
@@ -174,7 +166,6 @@ export default function GuestsManagement() {
     },
   });
 
-  // Delete guest mutation
   const deleteGuestMutation = useMutation({
     mutationFn: async (guest: Guest) => {
       const { error } = await supabase.from('guests').delete().eq('id', guest.id);
@@ -194,7 +185,6 @@ export default function GuestsManagement() {
     },
   });
 
-  // Mark as vacated mutation
   const vacateMutation = useMutation({
     mutationFn: async (guest: Guest) => {
       const { error } = await supabase
@@ -282,7 +272,7 @@ export default function GuestsManagement() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-24">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Guest Management</h1>
@@ -290,12 +280,12 @@ export default function GuestsManagement() {
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => handleOpenDialog()}>
+              <Button onClick={() => handleOpenDialog()} className="bg-foreground text-background hover:bg-foreground/90">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Guest
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md bg-card border-border">
               <DialogHeader>
                 <DialogTitle>{editingGuest ? 'Edit Guest' : 'Add New Guest'}</DialogTitle>
               </DialogHeader>
@@ -307,6 +297,7 @@ export default function GuestsManagement() {
                     value={formData.full_name}
                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                     placeholder="Enter full name"
+                    className="bg-secondary/50 border-border"
                     required
                   />
                 </div>
@@ -318,6 +309,7 @@ export default function GuestsManagement() {
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       placeholder="Phone number"
+                      className="bg-secondary/50 border-border"
                       required
                     />
                   </div>
@@ -329,6 +321,7 @@ export default function GuestsManagement() {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="Email"
+                      className="bg-secondary/50 border-border"
                     />
                   </div>
                 </div>
@@ -338,10 +331,10 @@ export default function GuestsManagement() {
                     value={formData.bed_id}
                     onValueChange={(value) => setFormData({ ...formData, bed_id: value })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-secondary/50 border-border">
                       <SelectValue placeholder="Select a bed" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-card border-border">
                       {getAvailableBeds().map((bed) => (
                         <SelectItem key={bed.id} value={bed.id}>
                           Room {bed.room?.room_number} - {bed.bed_number}
@@ -358,6 +351,7 @@ export default function GuestsManagement() {
                     min={0}
                     value={formData.monthly_rent}
                     onChange={(e) => setFormData({ ...formData, monthly_rent: parseInt(e.target.value) || 0 })}
+                    className="bg-secondary/50 border-border"
                     required
                   />
                 </div>
@@ -368,13 +362,14 @@ export default function GuestsManagement() {
                     value={formData.emergency_contact}
                     onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
                     placeholder="Emergency contact number"
+                    className="bg-secondary/50 border-border"
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" className="flex-1" disabled={addGuestMutation.isPending || updateGuestMutation.isPending}>
+                  <Button type="submit" className="flex-1 bg-foreground text-background hover:bg-foreground/90" disabled={addGuestMutation.isPending || updateGuestMutation.isPending}>
                     {editingGuest ? 'Update' : 'Add Guest'}
                   </Button>
                 </div>
@@ -394,12 +389,12 @@ export default function GuestsManagement() {
             ))}
           </div>
         ) : guests?.length === 0 ? (
-          <Card>
+          <Card className="premium-card">
             <CardContent className="py-12 text-center">
               <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No guests yet</h3>
               <p className="text-muted-foreground mb-4">Add your first guest to get started</p>
-              <Button onClick={() => handleOpenDialog()}>
+              <Button onClick={() => handleOpenDialog()} className="bg-foreground text-background hover:bg-foreground/90">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Guest
               </Button>
@@ -408,12 +403,12 @@ export default function GuestsManagement() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {guests?.map((guest) => (
-              <Card key={guest.id} className="hover:shadow-lg transition-shadow">
+              <Card key={guest.id} className="premium-card">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="w-5 h-5 text-primary" />
+                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                        <User className="w-5 h-5 text-muted-foreground" />
                       </div>
                       <div>
                         <CardTitle className="text-base">{guest.full_name}</CardTitle>
@@ -434,7 +429,7 @@ export default function GuestsManagement() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
                         onClick={() => deleteGuestMutation.mutate(guest)}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -457,8 +452,8 @@ export default function GuestsManagement() {
                     <BedDouble className="w-4 h-4" />
                     <span>{getBedDisplay(guest.bed_id)}</span>
                   </div>
-                  <div className="pt-2 border-t flex items-center justify-between">
-                    <span className="text-lg font-bold text-primary">₹{guest.monthly_rent}/mo</span>
+                  <div className="pt-2 border-t border-border flex items-center justify-between">
+                    <span className="text-lg font-bold">₹{guest.monthly_rent}/mo</span>
                     {guest.status === 'active' && (
                       <Button
                         size="sm"

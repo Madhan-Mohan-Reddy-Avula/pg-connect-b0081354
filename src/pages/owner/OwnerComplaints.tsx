@@ -23,7 +23,6 @@ export default function OwnerComplaints() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch owner's PG
   const { data: pg } = useQuery({
     queryKey: ['owner-pg', user?.id],
     queryFn: async () => {
@@ -38,7 +37,6 @@ export default function OwnerComplaints() {
     enabled: !!user?.id,
   });
 
-  // Fetch complaints
   const { data: complaints, isLoading } = useQuery({
     queryKey: ['owner-complaints', pg?.id],
     queryFn: async () => {
@@ -53,7 +51,6 @@ export default function OwnerComplaints() {
     enabled: !!pg?.id,
   });
 
-  // Update complaint status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await supabase
@@ -86,7 +83,7 @@ export default function OwnerComplaints() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-24">
         <div>
           <h1 className="text-2xl font-bold">Complaints</h1>
           <p className="text-muted-foreground">View and manage guest complaints</p>
@@ -94,11 +91,11 @@ export default function OwnerComplaints() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-4">
-          <Card>
+          <Card className="premium-card">
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-warning" />
+                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-muted-foreground" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Open</p>
@@ -107,11 +104,11 @@ export default function OwnerComplaints() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="premium-card">
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6 text-success" />
+                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                  <CheckCircle2 className="w-6 h-6 text-muted-foreground" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Closed</p>
@@ -134,7 +131,7 @@ export default function OwnerComplaints() {
             ))}
           </div>
         ) : complaints?.length === 0 ? (
-          <Card>
+          <Card className="premium-card">
             <CardContent className="py-12 text-center">
               <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No complaints</h3>
@@ -144,7 +141,7 @@ export default function OwnerComplaints() {
         ) : (
           <div className="space-y-4">
             {complaints?.map((complaint) => (
-              <Card key={complaint.id} className="hover:shadow-md transition-shadow">
+              <Card key={complaint.id} className="premium-card">
                 <CardContent className="p-5">
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex-1">
@@ -176,6 +173,7 @@ export default function OwnerComplaints() {
                           size="sm"
                           onClick={() => updateStatusMutation.mutate({ id: complaint.id, status: 'closed' })}
                           disabled={updateStatusMutation.isPending}
+                          className="bg-foreground text-background hover:bg-foreground/90"
                         >
                           <CheckCircle2 className="w-4 h-4 mr-1" />
                           Mark Closed

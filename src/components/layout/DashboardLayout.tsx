@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,8 @@ import {
   QrCode,
   CheckSquare,
   Wallet,
-  Settings,
-  ChevronLeft
+  Moon,
+  Sun
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -64,6 +64,36 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { role, signOut, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark');
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    // Check localStorage on mount
+    const stored = localStorage.getItem('theme');
+    if (stored === 'light') {
+      document.documentElement.classList.remove('dark');
+      setIsDark(false);
+    } else {
+      document.documentElement.classList.add('dark');
+      setIsDark(true);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    if (isDark) {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+      setIsDark(false);
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+      setIsDark(true);
+    }
+  };
 
   const navItems = role === 'owner' ? ownerNavItems : guestNavItems;
   const bottomNavItems = role === 'owner' ? ownerBottomNav : guestBottomNav;
@@ -76,11 +106,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex fixed top-0 left-0 bottom-0 w-72 bg-card/50 backdrop-blur-xl border-r border-border/30 flex-col z-50">
+      <aside className="hidden lg:flex fixed top-0 left-0 bottom-0 w-72 bg-card border-r border-border flex-col z-50">
         {/* Logo */}
-        <div className="p-6 border-b border-border/30">
+        <div className="p-6 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl btn-gradient flex items-center justify-center shadow-glow-sm">
+            <div className="w-11 h-11 rounded-xl bg-primary flex items-center justify-center">
               <Building2 className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
@@ -102,8 +132,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 className={cn(
                   "flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group",
                   isActive 
-                    ? "bg-primary text-primary-foreground shadow-glow-sm" 
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                    ? "bg-primary text-primary-foreground" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                 )}
               >
                 <Icon className={cn("w-5 h-5 transition-transform duration-300", isActive ? "" : "group-hover:scale-110")} />
@@ -117,47 +147,67 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
 
         {/* User Section */}
-        <div className="p-4 border-t border-border/30">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary/30 mb-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20 flex items-center justify-center">
-              <User className="w-5 h-5 text-primary" />
+        <div className="p-4 border-t border-border">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary mb-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 border border-border flex items-center justify-center">
+              <User className="w-5 h-5 text-foreground" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">{user?.email}</p>
               <p className="text-xs text-muted-foreground capitalize">{role}</p>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-xl"
-            onClick={handleSignOut}
-          >
-            <LogOut className="w-5 h-5 mr-3" />
-            Sign Out
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="text-muted-foreground hover:text-foreground hover:bg-secondary rounded-xl"
+              onClick={toggleTheme}
+            >
+              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="flex-1 justify-start text-muted-foreground hover:text-foreground hover:bg-secondary rounded-xl"
+              onClick={handleSignOut}
+            >
+              <LogOut className="w-5 h-5 mr-3" />
+              Sign Out
+            </Button>
+          </div>
         </div>
       </aside>
 
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card/80 backdrop-blur-xl border-b border-border/30 z-50 px-4 flex items-center justify-between">
+      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50 px-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl btn-gradient flex items-center justify-center shadow-glow-sm">
+          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
             <Building2 className="w-4 h-4 text-primary-foreground" />
           </div>
           <span className="font-bold text-lg text-foreground">PG Manager</span>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleSignOut}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <LogOut className="w-5 h-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleSignOut}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <LogOut className="w-5 h-5" />
+          </Button>
+        </div>
       </header>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-card/95 backdrop-blur-xl border-t border-border/30 z-50 px-2 safe-area-pb">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-card border-t border-border z-50 px-2 safe-area-pb">
         <div className="flex items-center justify-around h-full">
           {bottomNavItems.map((item) => {
             const Icon = item.icon;
@@ -169,17 +219,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all duration-300 min-w-[60px]",
                   isActive 
-                    ? "text-primary" 
+                    ? "text-foreground" 
                     : "text-muted-foreground"
                 )}
               >
                 <div className={cn(
                   "p-2 rounded-xl transition-all duration-300",
-                  isActive ? "bg-primary/10 shadow-glow-sm" : ""
+                  isActive ? "bg-primary/10" : ""
                 )}>
-                  <Icon className={cn("w-5 h-5", isActive ? "text-primary" : "")} />
+                  <Icon className={cn("w-5 h-5", isActive ? "text-foreground" : "")} />
                 </div>
-                <span className={cn("text-[10px] font-medium", isActive ? "text-primary" : "")}>
+                <span className={cn("text-[10px] font-medium", isActive ? "text-foreground" : "")}>
                   {item.label}
                 </span>
               </Link>

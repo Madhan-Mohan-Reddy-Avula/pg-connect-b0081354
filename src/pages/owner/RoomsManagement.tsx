@@ -66,7 +66,6 @@ export default function RoomsManagement() {
   // Add room mutation
   const addRoomMutation = useMutation({
     mutationFn: async (data: { room_number: string; floor: string; beds_count: number }) => {
-      // Create room
       const { data: room, error: roomError } = await supabase
         .from('rooms')
         .insert({
@@ -80,7 +79,6 @@ export default function RoomsManagement() {
       
       if (roomError) throw roomError;
 
-      // Auto-generate beds
       const beds = Array.from({ length: data.beds_count }, (_, i) => ({
         room_id: room.id,
         bed_number: `Bed ${i + 1}`,
@@ -183,7 +181,7 @@ export default function RoomsManagement() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-24">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Rooms Management</h1>
@@ -191,12 +189,12 @@ export default function RoomsManagement() {
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => handleOpenDialog()}>
+              <Button onClick={() => handleOpenDialog()} className="bg-foreground text-background hover:bg-foreground/90">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Room
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="bg-card border-border">
               <DialogHeader>
                 <DialogTitle>{editingRoom ? 'Edit Room' : 'Add New Room'}</DialogTitle>
               </DialogHeader>
@@ -208,6 +206,7 @@ export default function RoomsManagement() {
                     value={formData.room_number}
                     onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
                     placeholder="e.g., 101, A1"
+                    className="bg-secondary/50 border-border"
                     required
                   />
                 </div>
@@ -218,6 +217,7 @@ export default function RoomsManagement() {
                     value={formData.floor}
                     onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
                     placeholder="e.g., Ground, 1st, 2nd"
+                    className="bg-secondary/50 border-border"
                   />
                 </div>
                 <div className="space-y-2">
@@ -229,6 +229,7 @@ export default function RoomsManagement() {
                     max={10}
                     value={formData.beds_count}
                     onChange={(e) => setFormData({ ...formData, beds_count: parseInt(e.target.value) || 1 })}
+                    className="bg-secondary/50 border-border"
                     required
                   />
                   {!editingRoom && (
@@ -239,7 +240,7 @@ export default function RoomsManagement() {
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" className="flex-1" disabled={addRoomMutation.isPending || updateRoomMutation.isPending}>
+                  <Button type="submit" className="flex-1 bg-foreground text-background hover:bg-foreground/90" disabled={addRoomMutation.isPending || updateRoomMutation.isPending}>
                     {editingRoom ? 'Update' : 'Add Room'}
                   </Button>
                 </div>
@@ -259,12 +260,12 @@ export default function RoomsManagement() {
             ))}
           </div>
         ) : rooms?.length === 0 ? (
-          <Card>
+          <Card className="premium-card">
             <CardContent className="py-12 text-center">
               <DoorOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No rooms yet</h3>
               <p className="text-muted-foreground mb-4">Add your first room to get started</p>
-              <Button onClick={() => handleOpenDialog()}>
+              <Button onClick={() => handleOpenDialog()} className="bg-foreground text-background hover:bg-foreground/90">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Room
               </Button>
@@ -277,7 +278,7 @@ export default function RoomsManagement() {
               const totalBeds = room.beds?.length || 0;
               
               return (
-                <Card key={room.id} className="hover:shadow-lg transition-shadow">
+                <Card key={room.id} className="premium-card">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div>
@@ -298,7 +299,7 @@ export default function RoomsManagement() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
                           onClick={() => deleteRoomMutation.mutate(room.id)}
                         >
                           <Trash2 className="w-4 h-4" />

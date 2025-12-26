@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { User, Phone, Mail, FileText, Upload, Trash2, Eye, AlertCircle } from 'lucide-react';
+import { User, Phone, Mail, FileText, Upload, Eye, AlertCircle } from 'lucide-react';
 
 interface Document {
   id: string;
@@ -165,17 +165,17 @@ export default function GuestProfile() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 max-w-2xl">
+      <div className="space-y-6 max-w-2xl pb-24">
         <div>
           <h1 className="text-2xl font-bold">My Profile</h1>
           <p className="text-muted-foreground">View and update your personal information</p>
         </div>
 
         {/* Profile Card */}
-        <Card>
+        <Card className="premium-card">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
+              <User className="w-5 h-5 text-foreground" />
               Personal Information
             </CardTitle>
             {!isEditing && (
@@ -193,6 +193,7 @@ export default function GuestProfile() {
                     id="full_name"
                     value={formData.full_name}
                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                    className="bg-secondary/50 border-border"
                     required
                   />
                 </div>
@@ -203,6 +204,7 @@ export default function GuestProfile() {
                       id="phone"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="bg-secondary/50 border-border"
                       required
                     />
                   </div>
@@ -213,6 +215,7 @@ export default function GuestProfile() {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="bg-secondary/50 border-border"
                     />
                   </div>
                 </div>
@@ -222,6 +225,7 @@ export default function GuestProfile() {
                     id="emergency_contact"
                     value={formData.emergency_contact}
                     onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
+                    className="bg-secondary/50 border-border"
                     placeholder="Emergency contact number"
                   />
                 </div>
@@ -242,7 +246,7 @@ export default function GuestProfile() {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" className="flex-1" disabled={updateProfileMutation.isPending}>
+                  <Button type="submit" className="flex-1 bg-foreground text-background hover:bg-foreground/90" disabled={updateProfileMutation.isPending}>
                     Save Changes
                   </Button>
                 </div>
@@ -250,8 +254,8 @@ export default function GuestProfile() {
             ) : (
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="w-8 h-8 text-primary" />
+                  <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center">
+                    <User className="w-8 h-8 text-muted-foreground" />
                   </div>
                   <div>
                     <p className="text-xl font-bold">{guest.full_name}</p>
@@ -278,7 +282,7 @@ export default function GuestProfile() {
                 </div>
                 {guest.emergency_contact && (
                   <div className="flex items-center gap-3 pt-2">
-                    <Phone className="w-5 h-5 text-warning" />
+                    <Phone className="w-5 h-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">Emergency Contact</p>
                       <p className="font-medium">{guest.emergency_contact}</p>
@@ -291,16 +295,16 @@ export default function GuestProfile() {
         </Card>
 
         {/* Documents Card */}
-        <Card>
+        <Card className="premium-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
+              <FileText className="w-5 h-5 text-foreground" />
               ID Documents
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Upload Section */}
-            <div className="border-2 border-dashed rounded-lg p-6 text-center">
+            <div className="border-2 border-dashed border-border rounded-xl p-6 text-center">
               <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground mb-3">
                 Upload your ID proof (Aadhar, PAN, Passport, etc.)
@@ -344,7 +348,7 @@ export default function GuestProfile() {
                 </label>
               </div>
               {uploading && (
-                <p className="text-sm text-primary mt-2">Uploading...</p>
+                <p className="text-sm text-muted-foreground mt-2">Uploading...</p>
               )}
             </div>
 
@@ -355,10 +359,10 @@ export default function GuestProfile() {
                 {documents.map((doc) => (
                   <div
                     key={doc.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-secondary/50"
+                    className="flex items-center justify-between p-3 rounded-lg bg-secondary"
                   >
                     <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-primary" />
+                      <FileText className="w-5 h-5 text-muted-foreground" />
                       <div>
                         <p className="font-medium text-sm">{doc.document_type}</p>
                         <p className="text-xs text-muted-foreground">

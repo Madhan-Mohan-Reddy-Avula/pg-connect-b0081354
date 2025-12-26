@@ -40,13 +40,11 @@ export default function OwnerAnalytics() {
   const { data: occupancyData, isLoading: occupancyLoading } = useQuery({
     queryKey: ['occupancy-trends', pgData?.id],
     queryFn: async () => {
-      // Get total beds
       const { data: beds } = await supabase
         .from('beds')
         .select('id, is_occupied, room_id, rooms!inner(pg_id)')
         .eq('rooms.pg_id', pgData?.id);
 
-      // Get guest check-in dates for historical data
       const { data: guests } = await supabase
         .from('guests')
         .select('id, check_in_date, vacate_date, status')
@@ -55,14 +53,12 @@ export default function OwnerAnalytics() {
       const totalBeds = beds?.length || 0;
       const occupiedBeds = beds?.filter(b => b.is_occupied).length || 0;
 
-      // Generate last 6 months data
       const months = [];
       for (let i = 5; i >= 0; i--) {
         const date = subMonths(new Date(), i);
         const monthStart = startOfMonth(date);
         const monthEnd = endOfMonth(date);
 
-        // Count guests active during that month
         const activeGuests = guests?.filter(g => {
           const checkIn = g.check_in_date ? new Date(g.check_in_date) : null;
           const vacate = g.vacate_date ? new Date(g.vacate_date) : null;
@@ -99,7 +95,6 @@ export default function OwnerAnalytics() {
         .select('amount, month, status, guest_id, guests!inner(pg_id)')
         .eq('guests.pg_id', pgData?.id);
 
-      // Group by month
       const monthlyRevenue: Record<string, { collected: number; pending: number }> = {};
       
       for (let i = 5; i >= 0; i--) {
@@ -129,11 +124,7 @@ export default function OwnerAnalytics() {
       const totalCollected = months.reduce((sum, m) => sum + m.collected, 0);
       const totalPending = months.reduce((sum, m) => sum + m.pending, 0);
 
-      return {
-        months,
-        totalCollected,
-        totalPending,
-      };
+      return { months, totalCollected, totalPending };
     },
     enabled: !!pgData?.id,
   });
@@ -152,7 +143,7 @@ export default function OwnerAnalytics() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-24">
         <div>
           <h1 className="text-2xl font-bold">Analytics</h1>
           <p className="text-muted-foreground">Occupancy trends and revenue insights</p>
@@ -161,133 +152,71 @@ export default function OwnerAnalytics() {
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {occupancyLoading ? (
-            <>
-              <Skeleton className="h-28" />
-              <Skeleton className="h-28" />
-            </>
+            <><Skeleton className="h-28" /><Skeleton className="h-28" /></>
           ) : (
             <>
-              <StatCard
-                title="Current Occupancy"
-                value={`${occupancyData?.currentOccupancy || 0}%`}
-                icon={<Users className="w-6 h-6" />}
-                color="primary"
-              />
-              <StatCard
-                title="Beds Occupied"
-                value={`${occupancyData?.occupiedBeds || 0}/${occupancyData?.totalBeds || 0}`}
-                icon={<TrendingUp className="w-6 h-6" />}
-                color="info"
-              />
+              <StatCard title="Current Occupancy" value={`${occupancyData?.currentOccupancy || 0}%`} icon={<Users className="w-6 h-6" />} />
+              <StatCard title="Beds Occupied" value={`${occupancyData?.occupiedBeds || 0}/${occupancyData?.totalBeds || 0}`} icon={<TrendingUp className="w-6 h-6" />} />
             </>
           )}
           {revenueLoading ? (
-            <>
-              <Skeleton className="h-28" />
-              <Skeleton className="h-28" />
-            </>
+            <><Skeleton className="h-28" /><Skeleton className="h-28" /></>
           ) : (
             <>
-              <StatCard
-                title="Total Collected (6 mo)"
-                value={`₹${(revenueData?.totalCollected || 0).toLocaleString()}`}
-                icon={<IndianRupee className="w-6 h-6" />}
-                color="success"
-              />
-              <StatCard
-                title="Pending Amount"
-                value={`₹${(revenueData?.totalPending || 0).toLocaleString()}`}
-                icon={<IndianRupee className="w-6 h-6" />}
-                color="warning"
-              />
+              <StatCard title="Total Collected (6 mo)" value={`₹${(revenueData?.totalCollected || 0).toLocaleString()}`} icon={<IndianRupee className="w-6 h-6" />} />
+              <StatCard title="Pending Amount" value={`₹${(revenueData?.totalPending || 0).toLocaleString()}`} icon={<IndianRupee className="w-6 h-6" />} />
             </>
           )}
         </div>
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Occupancy Chart */}
-          <Card>
+          <Card className="premium-card">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <Users className="w-5 h-5 text-primary" />
+                <Users className="w-5 h-5" />
                 Occupancy Trends
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {occupancyLoading ? (
-                <Skeleton className="h-64" />
-              ) : (
+              {occupancyLoading ? <Skeleton className="h-64" /> : (
                 <ResponsiveContainer width="100%" height={280}>
                   <AreaChart data={occupancyData?.months || []}>
                     <defs>
                       <linearGradient id="occupancyGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                        <stop offset="5%" stopColor="hsl(var(--foreground))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--foreground))" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                     <XAxis dataKey="month" className="text-xs" />
                     <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} className="text-xs" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number) => [`${value}%`, 'Occupancy Rate']}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="rate"
-                      stroke="hsl(var(--primary))"
-                      fill="url(#occupancyGradient)"
-                      strokeWidth={2}
-                    />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} formatter={(value: number) => [`${value}%`, 'Occupancy Rate']} />
+                    <Area type="monotone" dataKey="rate" stroke="hsl(var(--foreground))" fill="url(#occupancyGradient)" strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
 
-          {/* Revenue Chart */}
-          <Card>
+          <Card className="premium-card">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <IndianRupee className="w-5 h-5 text-primary" />
+                <IndianRupee className="w-5 h-5" />
                 Revenue Overview
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {revenueLoading ? (
-                <Skeleton className="h-64" />
-              ) : (
+              {revenueLoading ? <Skeleton className="h-64" /> : (
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={revenueData?.months || []}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                     <XAxis dataKey="month" className="text-xs" />
                     <YAxis tickFormatter={(v) => `₹${v / 1000}k`} className="text-xs" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number) => [`₹${value.toLocaleString()}`, '']}
-                    />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} formatter={(value: number) => [`₹${value.toLocaleString()}`, '']} />
                     <Legend />
-                    <Bar
-                      dataKey="collected"
-                      name="Collected"
-                      fill="hsl(var(--success))"
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="pending"
-                      name="Pending"
-                      fill="hsl(var(--warning))"
-                      radius={[4, 4, 0, 0]}
-                    />
+                    <Bar dataKey="collected" name="Collected" fill="hsl(var(--foreground))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="pending" name="Pending" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
