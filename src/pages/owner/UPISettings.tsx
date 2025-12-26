@@ -113,13 +113,13 @@ const UPISettings = () => {
       const filePath = `upi-qr/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("documents")
+        .from("payment-screenshots")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from("documents")
+        .from("payment-screenshots")
         .getPublicUrl(filePath);
 
       setUpiQrUrl(publicUrl);
