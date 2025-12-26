@@ -3,14 +3,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, QrCode, CreditCard, Upload, CheckCircle, Clock, XCircle, AlertCircle } from "lucide-react";
+import { Loader2, QrCode, Upload, CheckCircle, Clock, XCircle, AlertCircle, ArrowRight, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 
 interface Payment {
@@ -102,7 +102,7 @@ const PayRent = () => {
       queryClient.invalidateQueries({ queryKey: ["guest-payments"] });
       toast({
         title: "Payment Submitted",
-        description: "Your payment has been submitted for verification. You will be notified once it's verified.",
+        description: "Your payment has been submitted for verification.",
       });
       setAmount("");
       setTransactionId("");
@@ -190,11 +190,23 @@ const PayRent = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "verified":
-        return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Verified</Badge>;
+        return (
+          <Badge className="bg-accent/20 text-accent border-accent/30 border">
+            <CheckCircle className="h-3 w-3 mr-1" />Verified
+          </Badge>
+        );
       case "rejected":
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
+        return (
+          <Badge className="bg-destructive/20 text-destructive border-destructive/30 border">
+            <XCircle className="h-3 w-3 mr-1" />Rejected
+          </Badge>
+        );
       default:
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+        return (
+          <Badge className="bg-secondary/20 text-secondary-foreground border-border border">
+            <Clock className="h-3 w-3 mr-1" />Pending
+          </Badge>
+        );
     }
   };
 
@@ -202,7 +214,7 @@ const PayRent = () => {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
         </div>
       </DashboardLayout>
     );
@@ -211,222 +223,234 @@ const PayRent = () => {
   if (!guestData?.pg?.upi_id) {
     return (
       <DashboardLayout>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <AlertCircle className="h-5 w-5" />
-              <p>UPI payment is not yet configured by the PG owner. Please contact them for payment details.</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="min-h-[60vh] flex items-center justify-center p-6">
+          <Card className="glass-card border-border/50 max-w-md">
+            <CardContent className="pt-8 pb-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-2">Payment Not Available</h3>
+              <p className="text-muted-foreground">
+                UPI payment is not yet configured by the PG owner. Please contact them for payment details.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </DashboardLayout>
     );
   }
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Pay Rent</h1>
-          <p className="text-muted-foreground">
-            Make payment via UPI and submit details for verification
-          </p>
-        </div>
+      <div className="space-y-6 animate-fade-in pb-24">
+        {/* Hero Payment Card */}
+        <Card className="premium-card overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-gold/5" />
+          <CardContent className="relative pt-8 pb-8">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="h-5 w-5 text-accent" />
+              <span className="text-sm text-accent font-medium">Monthly Rent</span>
+            </div>
+            {guestData.guest.monthly_rent > 0 && (
+              <div className="mb-6">
+                <span className="text-5xl font-bold text-foreground">₹{guestData.guest.monthly_rent.toLocaleString()}</span>
+              </div>
+            )}
+            <p className="text-muted-foreground text-sm">Scan QR or use UPI ID to pay</p>
+          </CardContent>
+        </Card>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* UPI Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                PG Owner UPI Details
-              </CardTitle>
-              <CardDescription>
-                Scan QR code or use UPI ID to make payment
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <Label className="text-sm text-muted-foreground">UPI ID</Label>
-                <p className="text-lg font-mono font-medium">{guestData.pg.upi_id}</p>
+        {/* UPI Details Card */}
+        <Card className="glass-card border-border/50">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex flex-col md:flex-row gap-6 items-center">
+              {/* QR Code */}
+              {guestData.pg.upi_qr_url && (
+                <div className="flex-shrink-0">
+                  <div className="p-3 bg-white rounded-2xl shadow-premium">
+                    <img
+                      src={guestData.pg.upi_qr_url}
+                      alt="UPI QR Code"
+                      className="w-40 h-40 object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {/* UPI ID */}
+              <div className="flex-1 text-center md:text-left">
+                <div className="flex items-center gap-2 justify-center md:justify-start mb-2">
+                  <QrCode className="h-5 w-5 text-accent" />
+                  <span className="text-sm text-muted-foreground">UPI ID</span>
+                </div>
+                <p className="text-lg font-mono font-semibold text-foreground bg-secondary/50 px-4 py-2 rounded-lg inline-block">
+                  {guestData.pg.upi_id}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Payment Form */}
+        <Card className="glass-card border-border/50">
+          <CardContent className="pt-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Submit Payment Details</h3>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-sm">Payment Purpose</Label>
+                <Select value={purpose} onValueChange={setPurpose}>
+                  <SelectTrigger className="bg-secondary/50 border-border/50 focus:border-accent">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border">
+                    <SelectItem value="rent">Rent</SelectItem>
+                    <SelectItem value="advance">Advance</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                    <SelectItem value="electricity">Electricity</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              {guestData.pg.upi_qr_url && (
-                <div className="text-center">
-                  <Label className="text-sm text-muted-foreground">Scan QR Code</Label>
-                  <img
-                    src={guestData.pg.upi_qr_url}
-                    alt="UPI QR Code"
-                    className="w-48 h-48 object-contain mx-auto border rounded-lg mt-2"
-                  />
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-sm">Amount (₹)</Label>
+                <Input
+                  type="number"
+                  placeholder="Enter amount"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  min="1"
+                  className="bg-secondary/50 border-border/50 focus:border-accent text-foreground placeholder:text-muted-foreground"
+                />
+              </div>
 
-              {guestData.guest.monthly_rent > 0 && (
-                <div className="p-4 bg-primary/10 rounded-lg">
-                  <Label className="text-sm text-muted-foreground">Monthly Rent</Label>
-                  <p className="text-2xl font-bold text-primary">₹{guestData.guest.monthly_rent}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-sm">UPI Transaction ID</Label>
+                <Input
+                  placeholder="Enter transaction/reference ID"
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value)}
+                  className="bg-secondary/50 border-border/50 focus:border-accent text-foreground placeholder:text-muted-foreground"
+                />
+              </div>
 
-          {/* Payment Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Submit Payment Details</CardTitle>
-              <CardDescription>
-                After making payment, enter the transaction details below
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="purpose">Payment Purpose</Label>
-                  <Select value={purpose} onValueChange={setPurpose}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="rent">Rent</SelectItem>
-                      <SelectItem value="advance">Advance</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
-                      <SelectItem value="electricity">Electricity</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount (₹)</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    placeholder="Enter amount"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    min="1"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="transaction-id">UPI Transaction ID</Label>
-                  <Input
-                    id="transaction-id"
-                    placeholder="Enter transaction/reference ID"
-                    value={transactionId}
-                    onChange={(e) => setTransactionId(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Payment Screenshot (Optional)</Label>
-                  {screenshotUrl ? (
-                    <div className="space-y-2">
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-sm">Payment Screenshot (Optional)</Label>
+                {screenshotUrl ? (
+                  <div className="space-y-3">
+                    <div className="relative rounded-xl overflow-hidden border border-border/50">
                       <img
                         src={screenshotUrl}
                         alt="Payment screenshot"
-                        className="w-full max-h-48 object-contain border rounded-lg"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setScreenshotUrl("")}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  ) : (
-                    <div>
-                      <Label htmlFor="screenshot-upload" className="cursor-pointer">
-                        <div className="border-2 border-dashed rounded-lg p-4 text-center hover:bg-muted/50 transition-colors">
-                          {uploading ? (
-                            <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                          ) : (
-                            <>
-                              <Upload className="h-6 w-6 mx-auto text-muted-foreground" />
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Click to upload screenshot
-                              </p>
-                            </>
-                          )}
-                        </div>
-                      </Label>
-                      <Input
-                        id="screenshot-upload"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleScreenshotUpload}
-                        disabled={uploading}
+                        className="w-full max-h-48 object-contain bg-secondary/30"
                       />
                     </div>
-                  )}
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={submitPaymentMutation.isPending}
-                >
-                  {submitPaymentMutation.isPending && (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  )}
-                  Submit Payment for Verification
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Payment History */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Payment History</CardTitle>
-            <CardDescription>Track the status of your submitted payments</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loadingPayments ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin" />
-              </div>
-            ) : payments?.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No payment history yet
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {payments?.map((payment) => (
-                  <div
-                    key={payment.id}
-                    className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg gap-4"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">₹{payment.amount}</span>
-                        <span className="text-muted-foreground">-</span>
-                        <span className="capitalize">{payment.payment_purpose}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Transaction ID: {payment.upi_transaction_id}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(payment.created_at), "PPp")}
-                      </p>
-                      {payment.status === "rejected" && payment.rejection_reason && (
-                        <p className="text-sm text-destructive">
-                          Reason: {payment.rejection_reason}
-                        </p>
-                      )}
-                    </div>
-                    <div>{getStatusBadge(payment.status)}</div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setScreenshotUrl("")}
+                      className="border-border/50 text-muted-foreground hover:text-foreground"
+                    >
+                      Remove
+                    </Button>
                   </div>
-                ))}
+                ) : (
+                  <div>
+                    <Label htmlFor="screenshot-upload" className="cursor-pointer">
+                      <div className="border-2 border-dashed border-border/50 rounded-xl p-6 text-center hover:border-accent/50 transition-colors bg-secondary/20">
+                        {uploading ? (
+                          <Loader2 className="h-8 w-8 animate-spin mx-auto text-accent" />
+                        ) : (
+                          <>
+                            <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                            <p className="text-sm text-muted-foreground">
+                              Click to upload screenshot
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </Label>
+                    <Input
+                      id="screenshot-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleScreenshotUpload}
+                      disabled={uploading}
+                    />
+                  </div>
+                )}
               </div>
-            )}
+
+              <Button
+                type="submit"
+                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-semibold py-6 rounded-xl shadow-glow transition-all duration-300 hover:shadow-glow-lg"
+                disabled={submitPaymentMutation.isPending}
+              >
+                {submitPaymentMutation.isPending ? (
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                ) : (
+                  <ArrowRight className="h-5 w-5 mr-2" />
+                )}
+                Submit Payment
+              </Button>
+            </form>
           </CardContent>
         </Card>
+
+        {/* Payment History */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-foreground">Payment History</h3>
+          {loadingPayments ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-accent" />
+            </div>
+          ) : payments?.length === 0 ? (
+            <Card className="glass-card border-border/50">
+              <CardContent className="py-12 text-center">
+                <div className="w-12 h-12 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-3">
+                  <Clock className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground">No payment history yet</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {payments?.map((payment, index) => (
+                <Card 
+                  key={payment.id} 
+                  className="glass-card border-border/50 hover:border-accent/30 transition-all duration-300"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl font-bold text-foreground">₹{payment.amount.toLocaleString()}</span>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-sm text-muted-foreground capitalize">{payment.payment_purpose}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          ID: {payment.upi_transaction_id}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(payment.created_at), "PPp")}
+                        </p>
+                        {payment.status === "rejected" && payment.rejection_reason && (
+                          <p className="text-xs text-destructive mt-1">
+                            Reason: {payment.rejection_reason}
+                          </p>
+                        )}
+                      </div>
+                      <div>{getStatusBadge(payment.status)}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );
