@@ -492,6 +492,7 @@ export type Database = {
           floor: string | null
           id: string
           image_url: string | null
+          images: string[] | null
           pg_id: string
           room_number: string
           updated_at: string
@@ -502,6 +503,7 @@ export type Database = {
           floor?: string | null
           id?: string
           image_url?: string | null
+          images?: string[] | null
           pg_id: string
           room_number: string
           updated_at?: string
@@ -512,6 +514,7 @@ export type Database = {
           floor?: string | null
           id?: string
           image_url?: string | null
+          images?: string[] | null
           pg_id?: string
           room_number?: string
           updated_at?: string

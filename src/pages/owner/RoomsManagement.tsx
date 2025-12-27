@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, BedDouble, Edit2, Trash2, DoorOpen, Image } from 'lucide-react';
-import { ImageUpload } from '@/components/ui/image-upload';
+import { MultiImageUpload } from '@/components/ui/image-upload';
 
 interface Room {
   id: string;
@@ -19,7 +19,8 @@ interface Room {
   floor: string | null;
   beds_count: number;
   pg_id: string;
-  image_url?: string | null;
+  image_url?: string | null; // legacy single image
+  images?: string[]; // new multiple images
   beds?: { id: string; bed_number: string; is_occupied: boolean }[];
 }
 
@@ -29,7 +30,7 @@ export default function RoomsManagement() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
-  const [roomImage, setRoomImage] = useState<string | null>(null);
+  const [roomImages, setRoomImages] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     room_number: '',
     floor: '',
@@ -68,7 +69,7 @@ export default function RoomsManagement() {
 
   // Add room mutation
   const addRoomMutation = useMutation({
-    mutationFn: async (data: { room_number: string; floor: string; beds_count: number; image_url: string | null }) => {
+    mutationFn: async (data: { room_number: string; floor: string; beds_count: number; images: string[] }) => {
       const { data: room, error: roomError } = await supabase
         .from('rooms')
         .insert({
@@ -76,7 +77,7 @@ export default function RoomsManagement() {
           room_number: data.room_number,
           floor: data.floor || null,
           beds_count: data.beds_count,
-          image_url: data.image_url,
+          images: data.images,
         })
         .select()
         .single();
@@ -97,7 +98,7 @@ export default function RoomsManagement() {
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
       setIsDialogOpen(false);
       resetForm();
-      setRoomImage(null);
+      setRoomImages([]);
       toast({ title: 'Room added', description: 'Room and beds created successfully' });
     },
     onError: (error: Error) => {
@@ -107,14 +108,14 @@ export default function RoomsManagement() {
 
   // Update room mutation
   const updateRoomMutation = useMutation({
-    mutationFn: async (data: { id: string; room_number: string; floor: string; beds_count: number; image_url: string | null }) => {
+    mutationFn: async (data: { id: string; room_number: string; floor: string; beds_count: number; images: string[] }) => {
       const { error } = await supabase
         .from('rooms')
         .update({
           room_number: data.room_number,
           floor: data.floor || null,
           beds_count: data.beds_count,
-          image_url: data.image_url,
+          images: data.images,
         })
         .eq('id', data.id);
       
@@ -125,7 +126,7 @@ export default function RoomsManagement() {
       setIsDialogOpen(false);
       setEditingRoom(null);
       resetForm();
-      setRoomImage(null);
+      setRoomImages([]);
       toast({ title: 'Room updated', description: 'Room details updated successfully' });
     },
     onError: (error: Error) => {
@@ -160,11 +161,13 @@ export default function RoomsManagement() {
         floor: room.floor || '',
         beds_count: room.beds_count,
       });
-      setRoomImage(room.image_url || null);
+      // Support both legacy single image and new multiple images
+      const images = room.images || (room.image_url ? [room.image_url] : []);
+      setRoomImages(images);
     } else {
       setEditingRoom(null);
       resetForm();
-      setRoomImage(null);
+      setRoomImages([]);
     }
     setIsDialogOpen(true);
   };
@@ -172,9 +175,9 @@ export default function RoomsManagement() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingRoom) {
-      updateRoomMutation.mutate({ id: editingRoom.id, ...formData, image_url: roomImage });
+      updateRoomMutation.mutate({ id: editingRoom.id, ...formData, images: roomImages });
     } else {
-      addRoomMutation.mutate({ ...formData, image_url: roomImage });
+      addRoomMutation.mutate({ ...formData, images: roomImages });
     }
   };
 
@@ -248,13 +251,14 @@ export default function RoomsManagement() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Image className="w-4 h-4" />
-                    Room Image (Optional)
+                    Room Images (Up to 6)
                   </Label>
-                  <ImageUpload
+                  <MultiImageUpload
                     bucket="pg-images"
                     folder={user?.id || 'unknown'}
-                    value={roomImage || undefined}
-                    onChange={setRoomImage}
+                    values={roomImages}
+                    onChange={setRoomImages}
+                    maxImages={6}
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
@@ -300,9 +304,9 @@ export default function RoomsManagement() {
               
               return (
                 <Card key={room.id} className="premium-card overflow-hidden">
-                  {room.image_url && (
+                  {(room.images?.length || room.image_url) && (
                     <div className="aspect-video w-full">
-                      <img src={room.image_url} alt={`Room ${room.room_number}`} className="w-full h-full object-cover" />
+                      <img src={room.images?.[0] || room.image_url || ''} alt={`Room ${room.room_number}`} className="w-full h-full object-cover" />
                     </div>
                   )}
                   <CardHeader className="pb-3">
