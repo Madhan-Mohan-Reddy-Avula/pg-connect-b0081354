@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Receipt, Edit2, Trash2, IndianRupee, Calendar, TrendingDown } from 'lucide-react';
+import { Plus, Receipt, Edit2, Trash2, IndianRupee, Calendar, TrendingDown, Image as ImageIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { ImageUpload } from '@/components/ui/image-upload';
 
 interface Expense {
   id: string;
@@ -23,6 +24,7 @@ interface Expense {
   amount: number;
   category: string;
   expense_month: string;
+  receipt_url?: string | null;
   created_at: string;
 }
 
@@ -45,6 +47,7 @@ export default function ExpensesManagement() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [filterMonth, setFilterMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [formData, setFormData] = useState({
     title: '',
@@ -91,7 +94,7 @@ export default function ExpensesManagement() {
 
   // Add expense mutation
   const addExpenseMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
+    mutationFn: async (data: typeof formData & { receipt_url: string | null }) => {
       const { error } = await supabase.from('expenses').insert({
         pg_id: pg!.id,
         title: data.title,
@@ -99,6 +102,7 @@ export default function ExpensesManagement() {
         amount: data.amount,
         category: data.category,
         expense_month: `${data.expense_month}-01`,
+        receipt_url: data.receipt_url,
       });
       if (error) throw error;
     },
@@ -106,6 +110,7 @@ export default function ExpensesManagement() {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       setIsDialogOpen(false);
       resetForm();
+      setReceiptImage(null);
       toast({ title: 'Expense added', description: 'Expense recorded successfully' });
     },
     onError: (error: Error) => {
@@ -115,7 +120,7 @@ export default function ExpensesManagement() {
 
   // Update expense mutation
   const updateExpenseMutation = useMutation({
-    mutationFn: async (data: { id: string } & typeof formData) => {
+    mutationFn: async (data: { id: string; receipt_url: string | null } & typeof formData) => {
       const { error } = await supabase
         .from('expenses')
         .update({
@@ -124,6 +129,7 @@ export default function ExpensesManagement() {
           amount: data.amount,
           category: data.category,
           expense_month: `${data.expense_month}-01`,
+          receipt_url: data.receipt_url,
         })
         .eq('id', data.id);
       if (error) throw error;
@@ -133,6 +139,7 @@ export default function ExpensesManagement() {
       setIsDialogOpen(false);
       setEditingExpense(null);
       resetForm();
+      setReceiptImage(null);
       toast({ title: 'Expense updated', description: 'Expense updated successfully' });
     },
     onError: (error: Error) => {
@@ -175,9 +182,11 @@ export default function ExpensesManagement() {
         category: expense.category,
         expense_month: format(new Date(expense.expense_month), 'yyyy-MM'),
       });
+      setReceiptImage(expense.receipt_url || null);
     } else {
       setEditingExpense(null);
       resetForm();
+      setReceiptImage(null);
     }
     setIsDialogOpen(true);
   };
@@ -185,9 +194,9 @@ export default function ExpensesManagement() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingExpense) {
-      updateExpenseMutation.mutate({ id: editingExpense.id, ...formData });
+      updateExpenseMutation.mutate({ id: editingExpense.id, ...formData, receipt_url: receiptImage });
     } else {
-      addExpenseMutation.mutate(formData);
+      addExpenseMutation.mutate({ ...formData, receipt_url: receiptImage });
     }
   };
 
@@ -287,8 +296,20 @@ export default function ExpensesManagement() {
                     rows={2}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" />
+                    Receipt Image (Optional)
+                  </Label>
+                  <ImageUpload
+                    bucket="expense-receipts"
+                    folder={user?.id || 'unknown'}
+                    value={receiptImage || undefined}
+                    onChange={setReceiptImage}
+                  />
+                </div>
                 <div className="flex gap-3 pt-4">
-                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => { setIsDialogOpen(false); setReceiptImage(null); }}>
                     Cancel
                   </Button>
                   <Button type="submit" className="flex-1 bg-foreground text-background hover:bg-foreground/90" disabled={addExpenseMutation.isPending || updateExpenseMutation.isPending}>
@@ -401,6 +422,17 @@ export default function ExpensesManagement() {
                         </div>
                         {expense.description && (
                           <p className="text-xs text-muted-foreground mt-1">{expense.description}</p>
+                        )}
+                        {expense.receipt_url && (
+                          <a 
+                            href={expense.receipt_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1"
+                          >
+                            <ImageIcon className="w-3 h-3" />
+                            View Receipt
+                          </a>
                         )}
                       </div>
                     </div>

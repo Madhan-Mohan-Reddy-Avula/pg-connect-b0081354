@@ -104,6 +104,7 @@ export type Database = {
           description: string
           guest_id: string
           id: string
+          image_url: string | null
           pg_id: string
           status: string
           title: string
@@ -114,6 +115,7 @@ export type Database = {
           description: string
           guest_id: string
           id?: string
+          image_url?: string | null
           pg_id: string
           status?: string
           title: string
@@ -124,6 +126,7 @@ export type Database = {
           description?: string
           guest_id?: string
           id?: string
+          image_url?: string | null
           pg_id?: string
           status?: string
           title?: string
@@ -187,6 +190,7 @@ export type Database = {
           expense_month: string
           id: string
           pg_id: string
+          receipt_url: string | null
           title: string
           updated_at: string
         }
@@ -198,6 +202,7 @@ export type Database = {
           expense_month: string
           id?: string
           pg_id: string
+          receipt_url?: string | null
           title: string
           updated_at?: string
         }
@@ -209,6 +214,7 @@ export type Database = {
           expense_month?: string
           id?: string
           pg_id?: string
+          receipt_url?: string | null
           title?: string
           updated_at?: string
         }
@@ -362,6 +368,7 @@ export type Database = {
           created_at: string
           house_rules: string | null
           id: string
+          images: string[] | null
           name: string
           owner_id: string
           owner_name: string
@@ -376,6 +383,7 @@ export type Database = {
           created_at?: string
           house_rules?: string | null
           id?: string
+          images?: string[] | null
           name: string
           owner_id: string
           owner_name: string
@@ -390,6 +398,7 @@ export type Database = {
           created_at?: string
           house_rules?: string | null
           id?: string
+          images?: string[] | null
           name?: string
           owner_id?: string
           owner_name?: string
@@ -482,6 +491,7 @@ export type Database = {
           created_at: string
           floor: string | null
           id: string
+          image_url: string | null
           pg_id: string
           room_number: string
           updated_at: string
@@ -491,6 +501,7 @@ export type Database = {
           created_at?: string
           floor?: string | null
           id?: string
+          image_url?: string | null
           pg_id: string
           room_number: string
           updated_at?: string
@@ -500,6 +511,7 @@ export type Database = {
           created_at?: string
           floor?: string | null
           id?: string
+          image_url?: string | null
           pg_id?: string
           room_number?: string
           updated_at?: string

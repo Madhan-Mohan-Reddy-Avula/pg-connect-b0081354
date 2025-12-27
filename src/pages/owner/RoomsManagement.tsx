@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, BedDouble, Edit2, Trash2, DoorOpen } from 'lucide-react';
+import { Plus, BedDouble, Edit2, Trash2, DoorOpen, Image } from 'lucide-react';
+import { ImageUpload } from '@/components/ui/image-upload';
 
 interface Room {
   id: string;
@@ -18,6 +19,7 @@ interface Room {
   floor: string | null;
   beds_count: number;
   pg_id: string;
+  image_url?: string | null;
   beds?: { id: string; bed_number: string; is_occupied: boolean }[];
 }
 
@@ -27,6 +29,7 @@ export default function RoomsManagement() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
+  const [roomImage, setRoomImage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     room_number: '',
     floor: '',
@@ -65,7 +68,7 @@ export default function RoomsManagement() {
 
   // Add room mutation
   const addRoomMutation = useMutation({
-    mutationFn: async (data: { room_number: string; floor: string; beds_count: number }) => {
+    mutationFn: async (data: { room_number: string; floor: string; beds_count: number; image_url: string | null }) => {
       const { data: room, error: roomError } = await supabase
         .from('rooms')
         .insert({
@@ -73,6 +76,7 @@ export default function RoomsManagement() {
           room_number: data.room_number,
           floor: data.floor || null,
           beds_count: data.beds_count,
+          image_url: data.image_url,
         })
         .select()
         .single();
@@ -93,6 +97,7 @@ export default function RoomsManagement() {
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
       setIsDialogOpen(false);
       resetForm();
+      setRoomImage(null);
       toast({ title: 'Room added', description: 'Room and beds created successfully' });
     },
     onError: (error: Error) => {
@@ -102,13 +107,14 @@ export default function RoomsManagement() {
 
   // Update room mutation
   const updateRoomMutation = useMutation({
-    mutationFn: async (data: { id: string; room_number: string; floor: string; beds_count: number }) => {
+    mutationFn: async (data: { id: string; room_number: string; floor: string; beds_count: number; image_url: string | null }) => {
       const { error } = await supabase
         .from('rooms')
         .update({
           room_number: data.room_number,
           floor: data.floor || null,
           beds_count: data.beds_count,
+          image_url: data.image_url,
         })
         .eq('id', data.id);
       
@@ -119,6 +125,7 @@ export default function RoomsManagement() {
       setIsDialogOpen(false);
       setEditingRoom(null);
       resetForm();
+      setRoomImage(null);
       toast({ title: 'Room updated', description: 'Room details updated successfully' });
     },
     onError: (error: Error) => {
@@ -153,9 +160,11 @@ export default function RoomsManagement() {
         floor: room.floor || '',
         beds_count: room.beds_count,
       });
+      setRoomImage(room.image_url || null);
     } else {
       setEditingRoom(null);
       resetForm();
+      setRoomImage(null);
     }
     setIsDialogOpen(true);
   };
@@ -163,9 +172,9 @@ export default function RoomsManagement() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingRoom) {
-      updateRoomMutation.mutate({ id: editingRoom.id, ...formData });
+      updateRoomMutation.mutate({ id: editingRoom.id, ...formData, image_url: roomImage });
     } else {
-      addRoomMutation.mutate(formData);
+      addRoomMutation.mutate({ ...formData, image_url: roomImage });
     }
   };
 
@@ -236,6 +245,18 @@ export default function RoomsManagement() {
                     <p className="text-sm text-muted-foreground">Beds will be auto-generated</p>
                   )}
                 </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Image className="w-4 h-4" />
+                    Room Image (Optional)
+                  </Label>
+                  <ImageUpload
+                    bucket="pg-images"
+                    folder={user?.id || 'unknown'}
+                    value={roomImage || undefined}
+                    onChange={setRoomImage}
+                  />
+                </div>
                 <div className="flex gap-3 pt-4">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
                     Cancel
@@ -278,7 +299,12 @@ export default function RoomsManagement() {
               const totalBeds = room.beds?.length || 0;
               
               return (
-                <Card key={room.id} className="premium-card">
+                <Card key={room.id} className="premium-card overflow-hidden">
+                  {room.image_url && (
+                    <div className="aspect-video w-full">
+                      <img src={room.image_url} alt={`Room ${room.room_number}`} className="w-full h-full object-cover" />
+                    </div>
+                  )}
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div>
