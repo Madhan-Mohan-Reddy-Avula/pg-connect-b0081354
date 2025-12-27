@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Building2, BedDouble, Home, IndianRupee, Calendar, Phone, MapPin, ScrollText, Wallet, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
+import { PhotoGallery } from '@/components/guest/PhotoGallery';
 
 export default function GuestDashboard() {
   const { user } = useAuth();
@@ -15,7 +16,7 @@ export default function GuestDashboard() {
   const { data: guest, isLoading: guestLoading } = useQuery({
     queryKey: ['guest-details', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('guests').select('*, bed:beds(bed_number, room:rooms(room_number, floor))').eq('user_id', user?.id).maybeSingle();
+      const { data, error } = await supabase.from('guests').select('*, bed:beds(bed_number, room:rooms(room_number, floor, images, image_url))').eq('user_id', user?.id).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -198,6 +199,14 @@ export default function GuestDashboard() {
             </CardContent>
           </Card>
         )}
+
+        {/* Photo Gallery */}
+        <PhotoGallery
+          pgImages={pg?.images || []}
+          roomImages={guest?.bed?.room?.images || (guest?.bed?.room?.image_url ? [guest.bed.room.image_url] : [])}
+          pgName={pg?.name}
+          roomNumber={guest?.bed?.room?.room_number}
+        />
       </div>
     </DashboardLayout>
   );

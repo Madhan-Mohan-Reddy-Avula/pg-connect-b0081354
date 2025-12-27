@@ -300,8 +300,9 @@ export default function PGSetup() {
                   folder={user?.id || 'unknown'}
                   values={pgImages}
                   onChange={setPgImages}
-                  maxImages={6}
-                />
+                maxImages={15}
+              />
+              <p className="text-xs text-muted-foreground">You can add up to 15 photos</p>
               </div>
 
               <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90" disabled={saving}>
