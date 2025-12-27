@@ -9,6 +9,7 @@ import { Building2, BedDouble, Home, IndianRupee, Calendar, Phone, MapPin, Scrol
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { PhotoGallery } from '@/components/guest/PhotoGallery';
+import { HouseRules } from '@/components/guest/HouseRules';
 
 export default function GuestDashboard() {
   const { user } = useAuth();
@@ -199,6 +200,9 @@ export default function GuestDashboard() {
             </CardContent>
           </Card>
         )}
+
+        {/* House Rules */}
+        <HouseRules rules={pg?.house_rules} pgName={pg?.name} />
 
         {/* Photo Gallery */}
         <PhotoGallery
