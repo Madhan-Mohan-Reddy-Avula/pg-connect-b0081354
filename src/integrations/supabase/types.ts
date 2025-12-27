@@ -14,6 +14,58 @@ export type Database = {
   }
   public: {
     Tables: {
+      bed_history: {
+        Row: {
+          assigned_date: string
+          bed_id: string
+          created_at: string
+          guest_id: string
+          id: string
+          pg_id: string
+          vacated_date: string | null
+        }
+        Insert: {
+          assigned_date?: string
+          bed_id: string
+          created_at?: string
+          guest_id: string
+          id?: string
+          pg_id: string
+          vacated_date?: string | null
+        }
+        Update: {
+          assigned_date?: string
+          bed_id?: string
+          created_at?: string
+          guest_id?: string
+          id?: string
+          pg_id?: string
+          vacated_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_bed_history_bed_id"
+            columns: ["bed_id"]
+            isOneToOne: false
+            referencedRelation: "beds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_bed_history_guest_id"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_bed_history_pg_id"
+            columns: ["pg_id"]
+            isOneToOne: false
+            referencedRelation: "pgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       beds: {
         Row: {
           bed_number: string
