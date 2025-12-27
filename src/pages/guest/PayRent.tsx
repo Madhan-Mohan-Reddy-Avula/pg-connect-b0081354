@@ -334,40 +334,59 @@ const PayRent = () => {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              {/* PhonePe */}
-              <a
-                href={`upi://pay?pa=${encodeURIComponent(guestData.pg.upi_id)}&pn=${encodeURIComponent(guestData.pg.name || 'PG Payment')}&am=${amount || guestData.guest.monthly_rent || ''}&cu=INR&mode=02&purpose=00`}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#5f259f]/10 hover:bg-[#5f259f]/20 border border-[#5f259f]/30 transition-all"
-              >
-                <div className="w-12 h-12 rounded-full bg-[#5f259f] flex items-center justify-center text-white">
-                  <PhonePeIcon />
-                </div>
-                <span className="text-sm font-medium text-foreground">PhonePe</span>
-              </a>
+            {(() => {
+              // Generate proper UPI payment URL
+              const payAmount = amount || guestData.guest.monthly_rent || '';
+              const payeeName = encodeURIComponent(guestData.pg.name || 'PG Payment');
+              
+              // Use contact number with @ybl suffix if UPI ID looks like a phone number, otherwise use as-is
+              let payeeAddress = guestData.pg.upi_id || '';
+              
+              // If the upi_id is just a phone number (10 digits), format it properly
+              const phoneOnly = payeeAddress.replace(/[^0-9]/g, '');
+              if (phoneOnly.length === 10 && !payeeAddress.includes('@')) {
+                payeeAddress = `${phoneOnly}@ybl`;
+              }
+              
+              const upiUrl = `upi://pay?pa=${encodeURIComponent(payeeAddress)}&pn=${payeeName}&am=${payAmount}&cu=INR&tn=${encodeURIComponent('PG Rent Payment')}`;
+              
+              return (
+                <div className="grid grid-cols-3 gap-3">
+                  {/* PhonePe */}
+                  <a
+                    href={upiUrl}
+                    className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#5f259f]/10 hover:bg-[#5f259f]/20 border border-[#5f259f]/30 transition-all"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-[#5f259f] flex items-center justify-center text-white">
+                      <PhonePeIcon />
+                    </div>
+                    <span className="text-sm font-medium text-foreground">PhonePe</span>
+                  </a>
 
-              {/* Google Pay */}
-              <a
-                href={`upi://pay?pa=${encodeURIComponent(guestData.pg.upi_id)}&pn=${encodeURIComponent(guestData.pg.name || 'PG Payment')}&am=${amount || guestData.guest.monthly_rent || ''}&cu=INR&mode=02&purpose=00`}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#4285f4]/10 hover:bg-[#4285f4]/20 border border-[#4285f4]/30 transition-all"
-              >
-                <div className="w-12 h-12 rounded-full bg-[#4285f4] flex items-center justify-center text-white">
-                  <GPayIcon />
-                </div>
-                <span className="text-sm font-medium text-foreground">GPay</span>
-              </a>
+                  {/* Google Pay */}
+                  <a
+                    href={upiUrl}
+                    className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#4285f4]/10 hover:bg-[#4285f4]/20 border border-[#4285f4]/30 transition-all"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-[#4285f4] flex items-center justify-center text-white">
+                      <GPayIcon />
+                    </div>
+                    <span className="text-sm font-medium text-foreground">GPay</span>
+                  </a>
 
-              {/* Paytm */}
-              <a
-                href={`upi://pay?pa=${encodeURIComponent(guestData.pg.upi_id)}&pn=${encodeURIComponent(guestData.pg.name || 'PG Payment')}&am=${amount || guestData.guest.monthly_rent || ''}&cu=INR&mode=02&purpose=00`}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#00baf2]/10 hover:bg-[#00baf2]/20 border border-[#00baf2]/30 transition-all"
-              >
-                <div className="w-12 h-12 rounded-full bg-[#00baf2] flex items-center justify-center text-white">
-                  <PaytmIcon />
+                  {/* Paytm */}
+                  <a
+                    href={upiUrl}
+                    className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#00baf2]/10 hover:bg-[#00baf2]/20 border border-[#00baf2]/30 transition-all"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-[#00baf2] flex items-center justify-center text-white">
+                      <PaytmIcon />
+                    </div>
+                    <span className="text-sm font-medium text-foreground">Paytm</span>
+                  </a>
                 </div>
-                <span className="text-sm font-medium text-foreground">Paytm</span>
-              </a>
-            </div>
+              );
+            })()}
 
             <p className="text-xs text-muted-foreground mt-4 text-center">
               After payment, submit the transaction ID below for verification
