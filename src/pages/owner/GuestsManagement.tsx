@@ -160,22 +160,22 @@ export default function GuestsManagement() {
 
   const addGuestMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const guestUserId = user!.id;
+      const payload = {
+        pg_id: pg!.id,
+        // user_id is optional until the guest creates an account
+        full_name: data.full_name,
+        phone: data.phone,
+        email: data.email || null,
+        bed_id: data.bed_id || null,
+        monthly_rent: data.monthly_rent,
+        emergency_contact: data.emergency_contact || null,
+        check_in_date: new Date().toISOString().split('T')[0],
+        status: 'active',
+      } as any;
 
       const { data: guest, error } = await supabase
         .from('guests')
-        .insert({
-          pg_id: pg!.id,
-          user_id: guestUserId,
-          full_name: data.full_name,
-          phone: data.phone,
-          email: data.email || null,
-          bed_id: data.bed_id || null,
-          monthly_rent: data.monthly_rent,
-          emergency_contact: data.emergency_contact || null,
-          check_in_date: new Date().toISOString().split('T')[0],
-          status: 'active',
-        })
+        .insert(payload)
         .select()
         .single();
 
