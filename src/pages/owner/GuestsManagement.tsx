@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, User, Edit2, Trash2, Users, BedDouble, Phone, Mail } from 'lucide-react';
+import { Plus, User, Edit2, Trash2, Users, BedDouble, Phone, Mail, History, Clock } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface Guest {
   id: string;
@@ -32,12 +33,26 @@ interface Bed {
   room: { room_number: string };
 }
 
+interface BedHistoryEntry {
+  id: string;
+  bed_id: string;
+  guest_id: string;
+  assigned_date: string;
+  vacated_date: string | null;
+  guest?: { full_name: string };
+  bed?: { bed_number: string; room: { room_number: string } };
+}
+
 export default function GuestsManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [selectedBedId, setSelectedBedId] = useState<string | null>(null);
+  const [guestHistoryDialogOpen, setGuestHistoryDialogOpen] = useState(false);
+  const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
@@ -76,7 +91,7 @@ export default function GuestsManagement() {
   });
 
   const { data: beds } = useQuery({
-    queryKey: ['available-beds', pg?.id],
+    queryKey: ['all-beds', pg?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('beds')
@@ -87,6 +102,60 @@ export default function GuestsManagement() {
       return data as unknown as Bed[];
     },
     enabled: !!pg?.id,
+  });
+
+  const { data: bedHistory } = useQuery({
+    queryKey: ['bed-history', selectedBedId],
+    queryFn: async () => {
+      const { data: historyData, error } = await supabase
+        .from('bed_history')
+        .select('*')
+        .eq('bed_id', selectedBedId!)
+        .order('assigned_date', { ascending: false });
+      if (error) throw error;
+      
+      // Fetch guest names manually
+      const guestIds = [...new Set(historyData?.map(h => h.guest_id) || [])];
+      const { data: guestData } = await supabase
+        .from('guests')
+        .select('id, full_name')
+        .in('id', guestIds);
+      
+      const guestMap = new Map(guestData?.map(g => [g.id, g.full_name]) || []);
+      
+      return historyData?.map(h => ({
+        ...h,
+        guest: { full_name: guestMap.get(h.guest_id) || 'Unknown' }
+      })) as BedHistoryEntry[];
+    },
+    enabled: !!selectedBedId,
+  });
+
+  const { data: guestHistory } = useQuery({
+    queryKey: ['guest-history', selectedGuestId],
+    queryFn: async () => {
+      const { data: historyData, error } = await supabase
+        .from('bed_history')
+        .select('*')
+        .eq('guest_id', selectedGuestId!)
+        .order('assigned_date', { ascending: false });
+      if (error) throw error;
+      
+      // Fetch bed info manually
+      const bedIds = [...new Set(historyData?.map(h => h.bed_id) || [])];
+      const { data: bedData } = await supabase
+        .from('beds')
+        .select('id, bed_number, room:rooms(room_number)')
+        .in('id', bedIds);
+      
+      const bedMap = new Map(bedData?.map(b => [b.id, { bed_number: b.bed_number, room: b.room }]) || []);
+      
+      return historyData?.map(h => ({
+        ...h,
+        bed: bedMap.get(h.bed_id) || { bed_number: 'Unknown', room: { room_number: 'Unknown' } }
+      })) as BedHistoryEntry[];
+    },
+    enabled: !!selectedGuestId,
   });
 
   const addGuestMutation = useMutation({
@@ -113,14 +182,24 @@ export default function GuestsManagement() {
       if (error) throw error;
 
       if (data.bed_id) {
+        // Update bed to occupied
         await supabase.from('beds').update({ is_occupied: true }).eq('id', data.bed_id);
+        
+        // Add to bed history
+        await supabase.from('bed_history').insert({
+          bed_id: data.bed_id,
+          guest_id: guest.id,
+          pg_id: pg!.id,
+          assigned_date: new Date().toISOString().split('T')[0],
+        });
       }
 
       return guest;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guests'] });
-      queryClient.invalidateQueries({ queryKey: ['available-beds'] });
+      queryClient.invalidateQueries({ queryKey: ['all-beds'] });
+      queryClient.invalidateQueries({ queryKey: ['bed-history'] });
       setIsDialogOpen(false);
       resetForm();
       toast({ title: 'Guest added', description: 'Guest has been added successfully' });
@@ -146,16 +225,38 @@ export default function GuestsManagement() {
 
       if (error) throw error;
 
+      // Handle bed change
       if (data.oldBedId && data.oldBedId !== data.bed_id) {
+        // Free old bed
         await supabase.from('beds').update({ is_occupied: false }).eq('id', data.oldBedId);
+        
+        // Close old history entry
+        await supabase
+          .from('bed_history')
+          .update({ vacated_date: new Date().toISOString().split('T')[0] })
+          .eq('guest_id', data.id)
+          .eq('bed_id', data.oldBedId)
+          .is('vacated_date', null);
       }
+      
       if (data.bed_id && data.bed_id !== data.oldBedId) {
+        // Occupy new bed
         await supabase.from('beds').update({ is_occupied: true }).eq('id', data.bed_id);
+        
+        // Add new history entry
+        await supabase.from('bed_history').insert({
+          bed_id: data.bed_id,
+          guest_id: data.id,
+          pg_id: pg!.id,
+          assigned_date: new Date().toISOString().split('T')[0],
+        });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guests'] });
-      queryClient.invalidateQueries({ queryKey: ['available-beds'] });
+      queryClient.invalidateQueries({ queryKey: ['all-beds'] });
+      queryClient.invalidateQueries({ queryKey: ['bed-history'] });
+      queryClient.invalidateQueries({ queryKey: ['guest-history'] });
       setIsDialogOpen(false);
       setEditingGuest(null);
       resetForm();
@@ -168,16 +269,24 @@ export default function GuestsManagement() {
 
   const deleteGuestMutation = useMutation({
     mutationFn: async (guest: Guest) => {
-      const { error } = await supabase.from('guests').delete().eq('id', guest.id);
-      if (error) throw error;
-
+      // Close any open history entry
       if (guest.bed_id) {
+        await supabase
+          .from('bed_history')
+          .update({ vacated_date: new Date().toISOString().split('T')[0] })
+          .eq('guest_id', guest.id)
+          .is('vacated_date', null);
+          
         await supabase.from('beds').update({ is_occupied: false }).eq('id', guest.bed_id);
       }
+      
+      const { error } = await supabase.from('guests').delete().eq('id', guest.id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guests'] });
-      queryClient.invalidateQueries({ queryKey: ['available-beds'] });
+      queryClient.invalidateQueries({ queryKey: ['all-beds'] });
+      queryClient.invalidateQueries({ queryKey: ['bed-history'] });
       toast({ title: 'Guest removed', description: 'Guest has been removed successfully' });
     },
     onError: (error: Error) => {
@@ -187,23 +296,37 @@ export default function GuestsManagement() {
 
   const vacateMutation = useMutation({
     mutationFn: async (guest: Guest) => {
+      const vacateDate = new Date().toISOString().split('T')[0];
+      
       const { error } = await supabase
         .from('guests')
         .update({
           status: 'vacated',
-          vacate_date: new Date().toISOString().split('T')[0],
+          vacate_date: vacateDate,
+          bed_id: null, // Clear bed assignment
         })
         .eq('id', guest.id);
 
       if (error) throw error;
 
       if (guest.bed_id) {
+        // Free bed
         await supabase.from('beds').update({ is_occupied: false }).eq('id', guest.bed_id);
+        
+        // Close history entry
+        await supabase
+          .from('bed_history')
+          .update({ vacated_date: vacateDate })
+          .eq('guest_id', guest.id)
+          .eq('bed_id', guest.bed_id)
+          .is('vacated_date', null);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guests'] });
-      queryClient.invalidateQueries({ queryKey: ['available-beds'] });
+      queryClient.invalidateQueries({ queryKey: ['all-beds'] });
+      queryClient.invalidateQueries({ queryKey: ['bed-history'] });
+      queryClient.invalidateQueries({ queryKey: ['guest-history'] });
       toast({ title: 'Guest vacated', description: 'Guest marked as vacated' });
     },
     onError: (error: Error) => {
@@ -258,6 +381,16 @@ export default function GuestsManagement() {
     if (!bedId || !beds) return 'Not assigned';
     const bed = beds.find(b => b.id === bedId);
     return bed ? `Room ${bed.room?.room_number} - ${bed.bed_number}` : 'Not assigned';
+  };
+
+  const openBedHistory = (bedId: string) => {
+    setSelectedBedId(bedId);
+    setHistoryDialogOpen(true);
+  };
+
+  const openGuestHistory = (guestId: string) => {
+    setSelectedGuestId(guestId);
+    setGuestHistoryDialogOpen(true);
   };
 
   if (!pg) {
@@ -422,6 +555,15 @@ export default function GuestsManagement() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
+                        onClick={() => openGuestHistory(guest.id)}
+                        title="View bed history"
+                      >
+                        <History className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
                         onClick={() => handleOpenDialog(guest)}
                       >
                         <Edit2 className="w-4 h-4" />
@@ -448,9 +590,22 @@ export default function GuestsManagement() {
                       <span className="truncate">{guest.email}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <BedDouble className="w-4 h-4" />
-                    <span>{getBedDisplay(guest.bed_id)}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <BedDouble className="w-4 h-4" />
+                      <span>{getBedDisplay(guest.bed_id)}</span>
+                    </div>
+                    {guest.bed_id && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => openBedHistory(guest.bed_id!)}
+                      >
+                        <Clock className="w-3 h-3 mr-1" />
+                        Bed History
+                      </Button>
+                    )}
                   </div>
                   <div className="pt-2 border-t border-border flex items-center justify-between">
                     <span className="text-lg font-bold">₹{guest.monthly_rent}/mo</span>
@@ -470,6 +625,72 @@ export default function GuestsManagement() {
           </div>
         )}
       </div>
+
+      {/* Bed History Dialog */}
+      <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
+        <DialogContent className="max-w-md bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="w-5 h-5" />
+              Bed History
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-80 overflow-y-auto">
+            {bedHistory?.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No history for this bed</p>
+            ) : (
+              bedHistory?.map((entry) => (
+                <div key={entry.id} className="p-3 bg-secondary/30 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{entry.guest?.full_name || 'Unknown'}</span>
+                    <Badge variant={entry.vacated_date ? 'secondary' : 'default'}>
+                      {entry.vacated_date ? 'Vacated' : 'Current'}
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {format(new Date(entry.assigned_date), 'dd MMM yyyy')}
+                    {entry.vacated_date && ` → ${format(new Date(entry.vacated_date), 'dd MMM yyyy')}`}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Guest Bed History Dialog */}
+      <Dialog open={guestHistoryDialogOpen} onOpenChange={setGuestHistoryDialogOpen}>
+        <DialogContent className="max-w-md bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="w-5 h-5" />
+              Guest's Bed History
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-80 overflow-y-auto">
+            {guestHistory?.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No bed history for this guest</p>
+            ) : (
+              guestHistory?.map((entry) => (
+                <div key={entry.id} className="p-3 bg-secondary/30 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">
+                      Room {entry.bed?.room?.room_number} - {entry.bed?.bed_number}
+                    </span>
+                    <Badge variant={entry.vacated_date ? 'secondary' : 'default'}>
+                      {entry.vacated_date ? 'Past' : 'Current'}
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {format(new Date(entry.assigned_date), 'dd MMM yyyy')}
+                    {entry.vacated_date && ` → ${format(new Date(entry.vacated_date), 'dd MMM yyyy')}`}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
