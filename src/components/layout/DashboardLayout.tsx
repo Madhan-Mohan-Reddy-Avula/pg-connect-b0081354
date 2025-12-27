@@ -101,8 +101,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const bottomNavItems = role === 'owner' ? ownerBottomNav : guestBottomNav;
 
   const handleSignOut = async () => {
+    navigate('/auth', { replace: true });
     await signOut();
-    navigate('/auth');
   };
 
   return (

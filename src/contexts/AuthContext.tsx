@@ -119,8 +119,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
     setRole(null);
+    setUser(null);
+    setSession(null);
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      // Ignore signOut errors (session may already be expired)
+      console.log('SignOut completed');
+    }
   };
 
   return (
