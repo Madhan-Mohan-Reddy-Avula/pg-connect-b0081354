@@ -10,8 +10,27 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, QrCode, Upload, CheckCircle, Clock, XCircle, AlertCircle, ArrowRight } from "lucide-react";
+import { Loader2, QrCode, Upload, CheckCircle, Clock, XCircle, AlertCircle, ArrowRight, Smartphone } from "lucide-react";
 import { format } from "date-fns";
+
+// UPI app icons as simple SVGs
+const PhonePeIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 13v1c0 1.1.9 2 2 2v2.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V6h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+  </svg>
+);
+
+const GPayIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+  </svg>
+);
+
+const PaytmIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-.17.02-.34.03-.51.04V17h-1v3c-.17 0-.34-.01-.51-.02V17h-1v2.88A8.001 8.001 0 014 12c0-4.42 3.58-8 8-8s8 3.58 8 8a7.999 7.999 0 01-7 7.93zM12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5z"/>
+  </svg>
+);
 
 interface Payment {
   id: string;
@@ -288,6 +307,71 @@ const PayRent = () => {
                 </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Pay with Apps */}
+        <Card className="premium-card">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Smartphone className="h-5 w-5 text-muted-foreground" />
+              <h3 className="font-semibold text-foreground">Pay with App</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Click to open app with amount pre-filled
+            </p>
+            
+            {/* Amount input for quick pay */}
+            <div className="mb-4">
+              <Label className="text-muted-foreground text-sm">Amount to Pay (₹)</Label>
+              <Input
+                type="number"
+                placeholder={guestData.guest.monthly_rent > 0 ? guestData.guest.monthly_rent.toString() : "Enter amount"}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                min="1"
+                className="bg-muted/50 border-border/50 focus:border-foreground/50 text-foreground placeholder:text-muted-foreground mt-2"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              {/* PhonePe */}
+              <a
+                href={`phonepe://pay?pa=${encodeURIComponent(guestData.pg.upi_id)}&pn=${encodeURIComponent(guestData.pg.name || 'PG Payment')}&am=${amount || guestData.guest.monthly_rent || ''}&cu=INR`}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#5f259f]/10 hover:bg-[#5f259f]/20 border border-[#5f259f]/30 transition-all"
+              >
+                <div className="w-12 h-12 rounded-full bg-[#5f259f] flex items-center justify-center text-white">
+                  <PhonePeIcon />
+                </div>
+                <span className="text-sm font-medium text-foreground">PhonePe</span>
+              </a>
+
+              {/* Google Pay */}
+              <a
+                href={`tez://upi/pay?pa=${encodeURIComponent(guestData.pg.upi_id)}&pn=${encodeURIComponent(guestData.pg.name || 'PG Payment')}&am=${amount || guestData.guest.monthly_rent || ''}&cu=INR`}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#4285f4]/10 hover:bg-[#4285f4]/20 border border-[#4285f4]/30 transition-all"
+              >
+                <div className="w-12 h-12 rounded-full bg-[#4285f4] flex items-center justify-center text-white">
+                  <GPayIcon />
+                </div>
+                <span className="text-sm font-medium text-foreground">GPay</span>
+              </a>
+
+              {/* Paytm */}
+              <a
+                href={`paytmmp://pay?pa=${encodeURIComponent(guestData.pg.upi_id)}&pn=${encodeURIComponent(guestData.pg.name || 'PG Payment')}&am=${amount || guestData.guest.monthly_rent || ''}&cu=INR`}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#00baf2]/10 hover:bg-[#00baf2]/20 border border-[#00baf2]/30 transition-all"
+              >
+                <div className="w-12 h-12 rounded-full bg-[#00baf2] flex items-center justify-center text-white">
+                  <PaytmIcon />
+                </div>
+                <span className="text-sm font-medium text-foreground">Paytm</span>
+              </a>
+            </div>
+
+            <p className="text-xs text-muted-foreground mt-4 text-center">
+              After payment, submit the transaction ID below for verification
+            </p>
           </CardContent>
         </Card>
 
