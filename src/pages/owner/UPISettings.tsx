@@ -8,6 +8,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Upload, QrCode, CreditCard, CheckCircle, Settings } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const UPI_PROVIDERS = [
+  { value: "ybl", label: "PhonePe", handle: "@ybl" },
+  { value: "okaxis", label: "Google Pay", handle: "@okaxis" },
+  { value: "paytm", label: "Paytm", handle: "@paytm" },
+  { value: "okhdfcbank", label: "Google Pay (HDFC)", handle: "@okhdfcbank" },
+  { value: "oksbi", label: "Google Pay (SBI)", handle: "@oksbi" },
+  { value: "okicici", label: "Google Pay (ICICI)", handle: "@okicici" },
+  { value: "ibl", label: "PhonePe (ICICI)", handle: "@ibl" },
+  { value: "axl", label: "PhonePe (Axis)", handle: "@axl" },
+  { value: "custom", label: "Custom UPI ID", handle: "" },
+];
 
 const UPISettings = () => {
   const { user } = useAuth();
@@ -17,6 +30,8 @@ const UPISettings = () => {
   const [pgId, setPgId] = useState<string | null>(null);
   const [upiId, setUpiId] = useState("");
   const [upiQrUrl, setUpiQrUrl] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [upiProvider, setUpiProvider] = useState("ybl");
 
   useEffect(() => {
     if (user) {
@@ -36,8 +51,23 @@ const UPISettings = () => {
 
       if (pg) {
         setPgId(pg.id);
-        setUpiId(pg.upi_id || "");
+        const savedUpiId = pg.upi_id || "";
+        setUpiId(savedUpiId);
         setUpiQrUrl(pg.upi_qr_url || "");
+        
+        // Parse saved UPI ID to extract phone number and provider
+        if (savedUpiId.includes("@")) {
+          const [phone, handle] = savedUpiId.split("@");
+          setPhoneNumber(phone);
+          const provider = UPI_PROVIDERS.find(p => p.value === handle);
+          if (provider) {
+            setUpiProvider(handle);
+          } else {
+            setUpiProvider("custom");
+          }
+        } else if (savedUpiId) {
+          setPhoneNumber(savedUpiId);
+        }
       }
     } catch (error: any) {
       toast({
@@ -60,10 +90,16 @@ const UPISettings = () => {
       return;
     }
 
-    if (!upiId.trim()) {
+    // Build UPI ID from phone number and provider
+    let finalUpiId = upiId;
+    if (upiProvider !== "custom" && phoneNumber) {
+      finalUpiId = `${phoneNumber}@${upiProvider}`;
+    }
+
+    if (!finalUpiId.trim()) {
       toast({
         title: "Error",
-        description: "Please enter a valid UPI ID",
+        description: "Please enter a valid UPI ID or phone number",
         variant: "destructive",
       });
       return;
@@ -71,9 +107,15 @@ const UPISettings = () => {
 
     setSaving(true);
     try {
+      // Build UPI ID from phone number and provider
+      let finalUpiId = upiId;
+      if (upiProvider !== "custom" && phoneNumber) {
+        finalUpiId = `${phoneNumber}@${upiProvider}`;
+      }
+
       const { error } = await supabase
         .from("pgs")
-        .update({ upi_id: upiId.trim(), upi_qr_url: upiQrUrl })
+        .update({ upi_id: finalUpiId.trim(), upi_qr_url: upiQrUrl })
         .eq("id", pgId);
 
       if (error) throw error;
@@ -190,25 +232,67 @@ const UPISettings = () => {
         {/* UPI ID Card */}
         <Card className="premium-card">
           <CardContent className="pt-6 pb-6 space-y-4">
-            <h3 className="font-semibold text-foreground">UPI ID</h3>
+            <h3 className="font-semibold text-foreground">UPI Payment Details</h3>
             
+            {/* UPI Provider Selection */}
             <div className="space-y-2">
-              <Label className="text-muted-foreground text-sm">Your UPI ID</Label>
-              <Input
-                placeholder="yourname@upi"
-                value={upiId}
-                onChange={(e) => setUpiId(e.target.value)}
-                className="bg-muted/50 border-border/50 focus:border-foreground/50 text-foreground placeholder:text-muted-foreground"
-              />
-              <p className="text-xs text-muted-foreground">
-                Example: name@paytm, phone@ybl, name@okicici
-              </p>
+              <Label className="text-muted-foreground text-sm">UPI Provider</Label>
+              <Select value={upiProvider} onValueChange={setUpiProvider}>
+                <SelectTrigger className="bg-muted/50 border-border/50 focus:border-foreground/50 text-foreground">
+                  <SelectValue placeholder="Select UPI provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  {UPI_PROVIDERS.map((provider) => (
+                    <SelectItem key={provider.value} value={provider.value}>
+                      {provider.label} {provider.handle && `(${provider.handle})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {upiId && (
+            {/* Phone Number / UPI ID Input */}
+            {upiProvider === "custom" ? (
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-sm">Custom UPI ID</Label>
+                <Input
+                  placeholder="yourname@upi"
+                  value={upiId}
+                  onChange={(e) => setUpiId(e.target.value)}
+                  className="bg-muted/50 border-border/50 focus:border-foreground/50 text-foreground placeholder:text-muted-foreground"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter your full UPI ID (e.g., name@bank)
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-sm">Phone Number</Label>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    placeholder="9876543210"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    className="bg-muted/50 border-border/50 focus:border-foreground/50 text-foreground placeholder:text-muted-foreground"
+                    maxLength={10}
+                  />
+                  <span className="text-muted-foreground font-medium whitespace-nowrap">
+                    @{upiProvider}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enter 10-digit phone number linked to your UPI
+                </p>
+              </div>
+            )}
+
+            {/* Preview */}
+            {((upiProvider !== "custom" && phoneNumber.length === 10) || (upiProvider === "custom" && upiId)) && (
               <div className="flex items-center gap-2 p-3 bg-foreground/5 rounded-lg border border-foreground/10">
                 <CheckCircle className="h-5 w-5 text-foreground" />
-                <span className="text-sm text-foreground">UPI ID configured</span>
+                <span className="text-sm text-foreground">
+                  UPI ID: <strong>{upiProvider === "custom" ? upiId : `${phoneNumber}@${upiProvider}`}</strong>
+                </span>
               </div>
             )}
           </CardContent>
