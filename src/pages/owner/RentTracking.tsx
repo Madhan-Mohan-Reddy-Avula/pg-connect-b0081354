@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Receipt, Check, Clock, IndianRupee, Calendar, User } from 'lucide-react';
+import { Plus, Receipt, Check, Clock, IndianRupee, Calendar, User, Download } from 'lucide-react';
+import { generateRentReceipt } from '@/utils/generateRentReceipt';
 import { format } from 'date-fns';
 
 interface Rent {
@@ -345,25 +346,50 @@ export default function RentTracking() {
                           )}
                         </Badge>
                       </div>
-                      {rent.status === 'pending' ? (
-                        <Button
-                          size="sm"
-                          onClick={() => markPaidMutation.mutate(rent.id)}
-                          disabled={markPaidMutation.isPending}
-                          className="bg-foreground text-background hover:bg-foreground/90"
-                        >
-                          Mark Paid
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => markPendingMutation.mutate(rent.id)}
-                          disabled={markPendingMutation.isPending}
-                        >
-                          Undo
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {rent.status === 'paid' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              if (pg && rent.guest) {
+                                generateRentReceipt({
+                                  guestName: rent.guest.full_name,
+                                  guestPhone: rent.guest.phone,
+                                  pgName: pg.name,
+                                  pgAddress: `${pg.address}, ${pg.city}`,
+                                  ownerName: pg.owner_name,
+                                  amount: rent.amount,
+                                  month: rent.month,
+                                  paidDate: rent.paid_date,
+                                  receiptId: rent.id,
+                                });
+                              }
+                            }}
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {rent.status === 'pending' ? (
+                          <Button
+                            size="sm"
+                            onClick={() => markPaidMutation.mutate(rent.id)}
+                            disabled={markPaidMutation.isPending}
+                            className="bg-foreground text-background hover:bg-foreground/90"
+                          >
+                            Mark Paid
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => markPendingMutation.mutate(rent.id)}
+                            disabled={markPendingMutation.isPending}
+                          >
+                            Undo
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                   {rent.paid_date && (
