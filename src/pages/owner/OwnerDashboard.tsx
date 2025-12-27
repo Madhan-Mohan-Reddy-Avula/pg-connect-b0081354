@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import StatCard from '@/components/dashboard/StatCard';
+import BedOccupancyWidget from '@/components/dashboard/BedOccupancyWidget';
+import RentRemindersWidget from '@/components/dashboard/RentRemindersWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +47,7 @@ export default function OwnerDashboard() {
   });
   const [recentGuests, setRecentGuests] = useState<RecentGuest[]>([]);
   const [hasPG, setHasPG] = useState<boolean | null>(null);
+  const [pgId, setPgId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,6 +58,7 @@ export default function OwnerDashboard() {
     try {
       const { data: pgData } = await supabase.from('pgs').select('id').eq('owner_id', user?.id).maybeSingle();
       setHasPG(!!pgData);
+      setPgId(pgData?.id || null);
       if (!pgData) { setLoading(false); return; }
 
       const currentMonth = format(new Date(), 'yyyy-MM');
@@ -162,41 +166,29 @@ export default function OwnerDashboard() {
           </Card>
         </div>
 
-        {(stats.pendingRents > 0 || stats.openComplaints > 0) && (
+        {/* Bed Occupancy & Rent Reminders Widgets */}
+        {pgId && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {stats.pendingRents > 0 && (
-              <Card className="premium-card border-warning/30 bg-gradient-to-br from-warning/5 to-transparent">
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
-                      <Receipt className="w-6 h-6 text-warning" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-foreground">{stats.pendingRents} Pending Rent{stats.pendingRents > 1 ? 's' : ''}</p>
-                      <p className="text-sm text-muted-foreground">Requires attention</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" asChild className="border-warning/30 hover:bg-warning/10"><Link to="/owner/rents">View</Link></Button>
-                </CardContent>
-              </Card>
-            )}
-            {stats.openComplaints > 0 && (
-              <Card className="premium-card border-destructive/30 bg-gradient-to-br from-destructive/5 to-transparent">
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
-                      <AlertCircle className="w-6 h-6 text-destructive" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-foreground">{stats.openComplaints} Open Complaint{stats.openComplaints > 1 ? 's' : ''}</p>
-                      <p className="text-sm text-muted-foreground">Needs resolution</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" asChild className="border-destructive/30 hover:bg-destructive/10"><Link to="/owner/complaints">View</Link></Button>
-                </CardContent>
-              </Card>
-            )}
+            <BedOccupancyWidget pgId={pgId} />
+            <RentRemindersWidget pgId={pgId} />
           </div>
+        )}
+
+        {stats.openComplaints > 0 && (
+          <Card className="premium-card border-destructive/30 bg-gradient-to-br from-destructive/5 to-transparent">
+            <CardContent className="p-5 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-destructive" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">{stats.openComplaints} Open Complaint{stats.openComplaints > 1 ? 's' : ''}</p>
+                  <p className="text-sm text-muted-foreground">Needs resolution</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" asChild className="border-destructive/30 hover:bg-destructive/10"><Link to="/owner/complaints">View</Link></Button>
+            </CardContent>
+          </Card>
         )}
 
         <Card className="premium-card border-border/30">

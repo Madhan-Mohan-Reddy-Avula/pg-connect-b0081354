@@ -11,9 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Receipt, Check, Clock, IndianRupee, Calendar, User, Download } from 'lucide-react';
+import { Plus, Receipt, Check, Clock, IndianRupee, Calendar, User, Download, AlertTriangle } from 'lucide-react';
 import { generateRentReceipt } from '@/utils/generateRentReceipt';
-import { format } from 'date-fns';
+import { format, differenceInDays, isPast, isToday } from 'date-fns';
 
 interface Rent {
   id: string;
@@ -22,6 +22,7 @@ interface Rent {
   month: string;
   status: string;
   paid_date: string | null;
+  due_date: string | null;
   guest?: { full_name: string; phone: string };
 }
 
@@ -40,6 +41,7 @@ export default function RentTracking() {
     guest_id: '',
     amount: 0,
     month: format(new Date(), 'yyyy-MM'),
+    due_date: format(new Date(new Date().getFullYear(), new Date().getMonth(), 5), 'yyyy-MM-dd'),
   });
 
   const { data: pg } = useQuery({
@@ -76,6 +78,7 @@ export default function RentTracking() {
       const { data, error } = await supabase
         .from('rents')
         .select('*, guest:guests(full_name, phone)')
+        .order('due_date', { ascending: true, nullsFirst: false })
         .order('month', { ascending: false });
       if (error) throw error;
       return data as Rent[];
@@ -89,6 +92,7 @@ export default function RentTracking() {
         guest_id: data.guest_id,
         amount: data.amount,
         month: `${data.month}-01`,
+        due_date: data.due_date,
         status: 'pending',
       });
       if (error) throw error;
@@ -145,21 +149,62 @@ export default function RentTracking() {
   });
 
   const resetForm = () => {
+    const now = new Date();
     setFormData({
       guest_id: '',
       amount: 0,
-      month: format(new Date(), 'yyyy-MM'),
+      month: format(now, 'yyyy-MM'),
+      due_date: format(new Date(now.getFullYear(), now.getMonth(), 5), 'yyyy-MM-dd'),
     });
+  };
+
+  const getStatusInfo = (rent: Rent) => {
+    if (rent.status === 'paid') {
+      return { status: 'paid', label: 'Paid', variant: 'default' as const };
+    }
+    
+    if (!rent.due_date) {
+      return { status: 'pending', label: 'Pending', variant: 'secondary' as const };
+    }
+
+    const due = new Date(rent.due_date);
+    const daysUntil = differenceInDays(due, new Date());
+
+    if (isPast(due) && !isToday(due)) {
+      const daysOverdue = Math.abs(daysUntil);
+      return {
+        status: 'overdue',
+        label: `${daysOverdue}d Overdue`,
+        variant: 'destructive' as const,
+      };
+    }
+
+    if (isToday(due)) {
+      return { status: 'due-today', label: 'Due Today', variant: 'secondary' as const };
+    }
+
+    if (daysUntil <= 3) {
+      return { status: 'due-soon', label: `${daysUntil}d Left`, variant: 'secondary' as const };
+    }
+
+    return { status: 'pending', label: 'Pending', variant: 'secondary' as const };
   };
 
   const handleGuestChange = (guestId: string) => {
     const guest = guests?.find(g => g.id === guestId);
+    const now = new Date();
     setFormData({
       ...formData,
       guest_id: guestId,
       amount: guest?.monthly_rent || 0,
+      due_date: format(new Date(now.getFullYear(), now.getMonth(), 5), 'yyyy-MM-dd'),
     });
   };
+
+  const overdueCount = rents?.filter(r => {
+    if (r.status !== 'pending' || !r.due_date) return false;
+    return isPast(new Date(r.due_date)) && !isToday(new Date(r.due_date));
+  }).length || 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,6 +283,17 @@ export default function RentTracking() {
                     required
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="due_date">Due Date</Label>
+                  <Input
+                    id="due_date"
+                    type="date"
+                    value={formData.due_date}
+                    onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                    className="bg-secondary/50 border-border"
+                    required
+                  />
+                </div>
                 <div className="flex gap-3 pt-4">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
                     Cancel
@@ -252,7 +308,7 @@ export default function RentTracking() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card className="premium-card">
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
@@ -266,6 +322,21 @@ export default function RentTracking() {
               </div>
             </CardContent>
           </Card>
+          {overdueCount > 0 && (
+            <Card className="premium-card border-destructive/30 bg-gradient-to-br from-destructive/5 to-transparent">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
+                    <AlertTriangle className="w-6 h-6 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-destructive">Overdue</p>
+                    <p className="text-2xl font-bold text-destructive">{overdueCount}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <Card className="premium-card">
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
@@ -319,87 +390,116 @@ export default function RentTracking() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {rents?.map((rent) => (
-              <Card key={rent.id} className="premium-card">
-                <CardContent className="p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                        <User className="w-5 h-5 text-muted-foreground" />
+            {rents?.map((rent) => {
+              const statusInfo = getStatusInfo(rent);
+              return (
+                <Card 
+                  key={rent.id} 
+                  className={`premium-card ${
+                    statusInfo.status === 'overdue' ? 'border-destructive/30' : ''
+                  }`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          statusInfo.status === 'overdue' ? 'bg-destructive/10' : 'bg-secondary'
+                        }`}>
+                          <User className={`w-5 h-5 ${
+                            statusInfo.status === 'overdue' ? 'text-destructive' : 'text-muted-foreground'
+                          }`} />
+                        </div>
+                        <div>
+                          <p className="font-medium">{rent.guest?.full_name}</p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Calendar className="w-3 h-3" />
+                            <span>{format(new Date(rent.month), 'MMMM yyyy')}</span>
+                            {rent.due_date && rent.status === 'pending' && (
+                              <>
+                                <span>•</span>
+                                <span className={statusInfo.status === 'overdue' ? 'text-destructive font-medium' : ''}>
+                                  Due: {format(new Date(rent.due_date), 'dd MMM')}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{rent.guest?.full_name}</p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="w-3 h-3" />
-                          <span>{format(new Date(rent.month), 'MMMM yyyy')}</span>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-lg font-bold">₹{rent.amount.toLocaleString()}</p>
+                          <Badge 
+                            variant={statusInfo.variant}
+                            className={
+                              statusInfo.status === 'overdue' ? 'bg-destructive/10 text-destructive border-destructive/20' :
+                              statusInfo.status === 'due-today' || statusInfo.status === 'due-soon' ? 'bg-warning/10 text-warning border-warning/20' :
+                              ''
+                            }
+                          >
+                            {statusInfo.status === 'paid' ? (
+                              <><Check className="w-3 h-3 mr-1" /> Paid</>
+                            ) : statusInfo.status === 'overdue' ? (
+                              <><AlertTriangle className="w-3 h-3 mr-1" /> {statusInfo.label}</>
+                            ) : (
+                              <><Clock className="w-3 h-3 mr-1" /> {statusInfo.label}</>
+                            )}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {rent.status === 'paid' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                if (pg && rent.guest) {
+                                  generateRentReceipt({
+                                    guestName: rent.guest.full_name,
+                                    guestPhone: rent.guest.phone,
+                                    pgName: pg.name,
+                                    pgAddress: `${pg.address}, ${pg.city}`,
+                                    ownerName: pg.owner_name,
+                                    amount: rent.amount,
+                                    month: rent.month,
+                                    paidDate: rent.paid_date,
+                                    receiptId: rent.id,
+                                  });
+                                }
+                              }}
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {rent.status === 'pending' ? (
+                            <Button
+                              size="sm"
+                              onClick={() => markPaidMutation.mutate(rent.id)}
+                              disabled={markPaidMutation.isPending}
+                              className="bg-foreground text-background hover:bg-foreground/90"
+                            >
+                              Mark Paid
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => markPendingMutation.mutate(rent.id)}
+                              disabled={markPendingMutation.isPending}
+                            >
+                              Undo
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-lg font-bold">₹{rent.amount.toLocaleString()}</p>
-                        <Badge variant={rent.status === 'paid' ? 'default' : 'secondary'}>
-                          {rent.status === 'paid' ? (
-                            <><Check className="w-3 h-3 mr-1" /> Paid</>
-                          ) : (
-                            <><Clock className="w-3 h-3 mr-1" /> Pending</>
-                          )}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {rent.status === 'paid' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              if (pg && rent.guest) {
-                                generateRentReceipt({
-                                  guestName: rent.guest.full_name,
-                                  guestPhone: rent.guest.phone,
-                                  pgName: pg.name,
-                                  pgAddress: `${pg.address}, ${pg.city}`,
-                                  ownerName: pg.owner_name,
-                                  amount: rent.amount,
-                                  month: rent.month,
-                                  paidDate: rent.paid_date,
-                                  receiptId: rent.id,
-                                });
-                              }
-                            }}
-                          >
-                            <Download className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {rent.status === 'pending' ? (
-                          <Button
-                            size="sm"
-                            onClick={() => markPaidMutation.mutate(rent.id)}
-                            disabled={markPaidMutation.isPending}
-                            className="bg-foreground text-background hover:bg-foreground/90"
-                          >
-                            Mark Paid
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => markPendingMutation.mutate(rent.id)}
-                            disabled={markPendingMutation.isPending}
-                          >
-                            Undo
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {rent.paid_date && (
-                    <p className="text-xs text-muted-foreground mt-2 ml-14">
-                      Paid on {format(new Date(rent.paid_date), 'dd MMM yyyy')}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                    {rent.paid_date && (
+                      <p className="text-xs text-muted-foreground mt-2 ml-14">
+                        Paid on {format(new Date(rent.paid_date), 'dd MMM yyyy')}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

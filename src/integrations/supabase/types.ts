@@ -436,6 +436,7 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          due_date: string | null
           guest_id: string
           id: string
           month: string
@@ -446,6 +447,7 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
+          due_date?: string | null
           guest_id: string
           id?: string
           month: string
@@ -456,6 +458,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          due_date?: string | null
           guest_id?: string
           id?: string
           month?: string
