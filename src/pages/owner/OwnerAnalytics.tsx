@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BarChart3, TrendingUp, Users, IndianRupee } from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, Users, IndianRupee } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -16,6 +16,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  ComposedChart,
+  Line,
 } from 'recharts';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import StatCard from '@/components/dashboard/StatCard';
@@ -129,6 +131,65 @@ export default function OwnerAnalytics() {
     enabled: !!pgData?.id,
   });
 
+  // Fetch expenses for profit/loss calculation
+  const { data: profitLossData, isLoading: profitLossLoading } = useQuery({
+    queryKey: ['profit-loss', pgData?.id],
+    queryFn: async () => {
+      // Get rent data
+      const { data: rents } = await supabase
+        .from('rents')
+        .select('amount, month, status, guest_id, guests!inner(pg_id)')
+        .eq('guests.pg_id', pgData?.id)
+        .eq('status', 'paid');
+
+      // Get expenses data
+      const { data: expenses } = await supabase
+        .from('expenses')
+        .select('amount, expense_month')
+        .eq('pg_id', pgData?.id);
+
+      const monthlyData: Record<string, { income: number; expenses: number }> = {};
+      
+      // Initialize last 6 months
+      for (let i = 5; i >= 0; i--) {
+        const date = subMonths(new Date(), i);
+        const monthKey = format(date, 'yyyy-MM');
+        monthlyData[monthKey] = { income: 0, expenses: 0 };
+      }
+
+      // Aggregate rent income
+      rents?.forEach(rent => {
+        const monthKey = rent.month.substring(0, 7);
+        if (monthlyData[monthKey]) {
+          monthlyData[monthKey].income += Number(rent.amount);
+        }
+      });
+
+      // Aggregate expenses
+      expenses?.forEach(expense => {
+        const monthKey = expense.expense_month.substring(0, 7);
+        if (monthlyData[monthKey]) {
+          monthlyData[monthKey].expenses += Number(expense.amount);
+        }
+      });
+
+      const months = Object.entries(monthlyData).map(([key, value]) => ({
+        month: format(new Date(key + '-01'), 'MMM'),
+        monthKey: key,
+        income: value.income,
+        expenses: value.expenses,
+        profit: value.income - value.expenses,
+      }));
+
+      const totalIncome = months.reduce((sum, m) => sum + m.income, 0);
+      const totalExpenses = months.reduce((sum, m) => sum + m.expenses, 0);
+      const totalProfit = totalIncome - totalExpenses;
+
+      return { months, totalIncome, totalExpenses, totalProfit };
+    },
+    enabled: !!pgData?.id,
+  });
+
   if (!pgData) {
     return (
       <DashboardLayout>
@@ -146,28 +207,82 @@ export default function OwnerAnalytics() {
       <div className="space-y-6 pb-24">
         <div>
           <h1 className="text-2xl font-bold">Analytics</h1>
-          <p className="text-muted-foreground">Occupancy trends and revenue insights</p>
+          <p className="text-muted-foreground">Occupancy trends, revenue insights & profit/loss</p>
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {occupancyLoading ? (
             <><Skeleton className="h-28" /><Skeleton className="h-28" /></>
           ) : (
             <>
-              <StatCard title="Current Occupancy" value={`${occupancyData?.currentOccupancy || 0}%`} icon={<Users className="w-6 h-6" />} />
-              <StatCard title="Beds Occupied" value={`${occupancyData?.occupiedBeds || 0}/${occupancyData?.totalBeds || 0}`} icon={<TrendingUp className="w-6 h-6" />} />
+              <StatCard title="Occupancy" value={`${occupancyData?.currentOccupancy || 0}%`} icon={<Users className="w-6 h-6" />} />
+              <StatCard title="Beds" value={`${occupancyData?.occupiedBeds || 0}/${occupancyData?.totalBeds || 0}`} icon={<TrendingUp className="w-6 h-6" />} />
             </>
           )}
           {revenueLoading ? (
             <><Skeleton className="h-28" /><Skeleton className="h-28" /></>
           ) : (
             <>
-              <StatCard title="Total Collected (6 mo)" value={`₹${(revenueData?.totalCollected || 0).toLocaleString()}`} icon={<IndianRupee className="w-6 h-6" />} />
-              <StatCard title="Pending Amount" value={`₹${(revenueData?.totalPending || 0).toLocaleString()}`} icon={<IndianRupee className="w-6 h-6" />} />
+              <StatCard title="Collected" value={`₹${(revenueData?.totalCollected || 0).toLocaleString()}`} icon={<IndianRupee className="w-6 h-6" />} />
+              <StatCard title="Pending" value={`₹${(revenueData?.totalPending || 0).toLocaleString()}`} icon={<IndianRupee className="w-6 h-6" />} />
+            </>
+          )}
+          {profitLossLoading ? (
+            <><Skeleton className="h-28" /><Skeleton className="h-28" /></>
+          ) : (
+            <>
+              <StatCard title="Expenses" value={`₹${(profitLossData?.totalExpenses || 0).toLocaleString()}`} icon={<TrendingDown className="w-6 h-6" />} />
+              <StatCard 
+                title="Net Profit" 
+                value={`₹${Math.abs(profitLossData?.totalProfit || 0).toLocaleString()}`} 
+                icon={(profitLossData?.totalProfit || 0) >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />} 
+              />
             </>
           )}
         </div>
+
+        {/* Profit/Loss Chart */}
+        <Card className="premium-card">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Monthly Profit/Loss
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {profitLossLoading ? <Skeleton className="h-72" /> : (
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart data={profitLossData?.months || []}>
+                  <defs>
+                    <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--foreground))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--foreground))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="month" className="text-xs" />
+                  <YAxis tickFormatter={(v) => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} className="text-xs" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))', 
+                      borderRadius: '8px' 
+                    }} 
+                    formatter={(value: number, name: string) => [
+                      `₹${value.toLocaleString()}`, 
+                      name === 'income' ? 'Rent Collected' : name === 'expenses' ? 'Expenses' : 'Net Profit'
+                    ]} 
+                  />
+                  <Legend formatter={(value) => value === 'income' ? 'Rent Collected' : value === 'expenses' ? 'Expenses' : 'Net Profit'} />
+                  <Bar dataKey="income" name="income" fill="hsl(var(--foreground))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="expenses" name="expenses" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
+                  <Line type="monotone" dataKey="profit" name="profit" stroke="hsl(var(--foreground))" strokeWidth={2} dot={{ fill: 'hsl(var(--foreground))', strokeWidth: 2 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
