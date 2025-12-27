@@ -337,7 +337,7 @@ const PayRent = () => {
             <div className="grid grid-cols-3 gap-3">
               {/* PhonePe */}
               <a
-                href={`phonepe://pay?pa=${encodeURIComponent(guestData.pg.upi_id)}&pn=${encodeURIComponent(guestData.pg.name || 'PG Payment')}&am=${amount || guestData.guest.monthly_rent || ''}&cu=INR`}
+                href={`upi://pay?pa=${encodeURIComponent(guestData.pg.upi_id)}&pn=${encodeURIComponent(guestData.pg.name || 'PG Payment')}&am=${amount || guestData.guest.monthly_rent || ''}&cu=INR&mode=02&purpose=00`}
                 className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#5f259f]/10 hover:bg-[#5f259f]/20 border border-[#5f259f]/30 transition-all"
               >
                 <div className="w-12 h-12 rounded-full bg-[#5f259f] flex items-center justify-center text-white">
@@ -348,7 +348,7 @@ const PayRent = () => {
 
               {/* Google Pay */}
               <a
-                href={`tez://upi/pay?pa=${encodeURIComponent(guestData.pg.upi_id)}&pn=${encodeURIComponent(guestData.pg.name || 'PG Payment')}&am=${amount || guestData.guest.monthly_rent || ''}&cu=INR`}
+                href={`upi://pay?pa=${encodeURIComponent(guestData.pg.upi_id)}&pn=${encodeURIComponent(guestData.pg.name || 'PG Payment')}&am=${amount || guestData.guest.monthly_rent || ''}&cu=INR&mode=02&purpose=00`}
                 className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#4285f4]/10 hover:bg-[#4285f4]/20 border border-[#4285f4]/30 transition-all"
               >
                 <div className="w-12 h-12 rounded-full bg-[#4285f4] flex items-center justify-center text-white">
@@ -359,7 +359,7 @@ const PayRent = () => {
 
               {/* Paytm */}
               <a
-                href={`paytmmp://pay?pa=${encodeURIComponent(guestData.pg.upi_id)}&pn=${encodeURIComponent(guestData.pg.name || 'PG Payment')}&am=${amount || guestData.guest.monthly_rent || ''}&cu=INR`}
+                href={`upi://pay?pa=${encodeURIComponent(guestData.pg.upi_id)}&pn=${encodeURIComponent(guestData.pg.name || 'PG Payment')}&am=${amount || guestData.guest.monthly_rent || ''}&cu=INR&mode=02&purpose=00`}
                 className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#00baf2]/10 hover:bg-[#00baf2]/20 border border-[#00baf2]/30 transition-all"
               >
                 <div className="w-12 h-12 rounded-full bg-[#00baf2] flex items-center justify-center text-white">
