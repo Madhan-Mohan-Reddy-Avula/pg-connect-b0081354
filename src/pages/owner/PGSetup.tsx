@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Building2 } from 'lucide-react';
+import { Loader2, Save, Building2, Image } from 'lucide-react';
 import { z } from 'zod';
+import { MultiImageUpload } from '@/components/ui/image-upload';
 
 const pgSchema = z.object({
   name: z.string().min(2, 'PG name is required').max(100),
@@ -24,6 +25,7 @@ type PGFormData = z.infer<typeof pgSchema>;
 
 interface PGData extends PGFormData {
   id?: string;
+  images?: string[];
 }
 
 export default function PGSetup() {
@@ -31,6 +33,7 @@ export default function PGSetup() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pgImages, setPgImages] = useState<string[]>([]);
   const [pgData, setPgData] = useState<PGData>({
     name: '',
     address: '',
@@ -67,6 +70,7 @@ export default function PGSetup() {
           contact_number: data.contact_number,
           house_rules: data.house_rules || '',
         });
+        setPgImages(data.images || []);
       }
     } catch (error) {
       console.error('Error fetching PG data:', error);
@@ -115,6 +119,7 @@ export default function PGSetup() {
             owner_name: pgData.owner_name,
             contact_number: pgData.contact_number,
             house_rules: pgData.house_rules,
+            images: pgImages,
           })
           .eq('id', pgData.id);
 
@@ -135,6 +140,7 @@ export default function PGSetup() {
             owner_name: pgData.owner_name,
             contact_number: pgData.contact_number,
             house_rules: pgData.house_rules,
+            images: pgImages,
           })
           .select()
           .single();
@@ -280,6 +286,22 @@ export default function PGSetup() {
                   className="bg-secondary/50 border-border"
                 />
                 {errors.house_rules && <p className="text-sm text-destructive">{errors.house_rules}</p>}
+              </div>
+
+              {/* PG Images */}
+              <div className="space-y-2">
+                <Label className="text-foreground flex items-center gap-2">
+                  <Image className="w-4 h-4" />
+                  PG Images
+                </Label>
+                <p className="text-sm text-muted-foreground">Add photos of your PG (visible to guests)</p>
+                <MultiImageUpload
+                  bucket="pg-images"
+                  folder={user?.id || 'unknown'}
+                  values={pgImages}
+                  onChange={setPgImages}
+                  maxImages={6}
+                />
               </div>
 
               <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90" disabled={saving}>

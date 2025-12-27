@@ -11,14 +11,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, MessageSquare, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, MessageSquare, Clock, CheckCircle2, AlertCircle, Image as ImageIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { ImageUpload } from '@/components/ui/image-upload';
 
 interface Complaint {
   id: string;
   title: string;
   description: string;
   status: string;
+  image_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +30,7 @@ export default function GuestComplaints() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [complaintImage, setComplaintImage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -65,12 +68,13 @@ export default function GuestComplaints() {
 
   // Add complaint mutation
   const addComplaintMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
+    mutationFn: async (data: typeof formData & { image_url: string | null }) => {
       const { error } = await supabase.from('complaints').insert({
         guest_id: guest!.id,
         pg_id: guest!.pg_id,
         title: data.title,
         description: data.description,
+        image_url: data.image_url,
         status: 'open',
       });
       if (error) throw error;
@@ -79,6 +83,7 @@ export default function GuestComplaints() {
       queryClient.invalidateQueries({ queryKey: ['guest-complaints'] });
       setIsDialogOpen(false);
       setFormData({ title: '', description: '' });
+      setComplaintImage(null);
       toast({ title: 'Complaint submitted', description: 'Your complaint has been sent to the owner' });
     },
     onError: (error: Error) => {
@@ -88,7 +93,7 @@ export default function GuestComplaints() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addComplaintMutation.mutate(formData);
+    addComplaintMutation.mutate({ ...formData, image_url: complaintImage });
   };
 
   const openCount = complaints?.filter(c => c.status === 'open').length || 0;
@@ -149,8 +154,20 @@ export default function GuestComplaints() {
                     required
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" />
+                    Attach Image (Optional)
+                  </Label>
+                  <ImageUpload
+                    bucket="complaint-images"
+                    folder={user?.id || 'unknown'}
+                    value={complaintImage || undefined}
+                    onChange={setComplaintImage}
+                  />
+                </div>
                 <div className="flex gap-3 pt-4">
-                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => { setIsDialogOpen(false); setComplaintImage(null); }}>
                     Cancel
                   </Button>
                   <Button type="submit" className="flex-1 bg-foreground text-background hover:bg-foreground/90" disabled={addComplaintMutation.isPending}>
@@ -235,6 +252,11 @@ export default function GuestComplaints() {
                       <p className="text-sm text-muted-foreground mb-3 whitespace-pre-wrap">
                         {complaint.description}
                       </p>
+                      {complaint.image_url && (
+                        <div className="mb-3 rounded-lg overflow-hidden border border-border max-w-xs">
+                          <img src={complaint.image_url} alt="Complaint attachment" className="w-full h-auto" />
+                        </div>
+                      )}
                       <p className="text-xs text-muted-foreground">
                         Submitted on {format(new Date(complaint.created_at), 'dd MMM yyyy, hh:mm a')}
                       </p>
