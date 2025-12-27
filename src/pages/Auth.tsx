@@ -8,9 +8,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Loader2, Home, Users, ArrowLeft, Sparkles } from 'lucide-react';
+import { Building2, Loader2, Home, Users, Sparkles } from 'lucide-react';
 import { z } from 'zod';
-import { Link } from 'react-router-dom';
 
 const authSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -114,11 +113,6 @@ export default function Auth() {
       </div>
 
       <div className="w-full max-w-md animate-slide-up">
-        {/* Back Link */}
-        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8">
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm">Back to home</span>
-        </Link>
 
         {/* Logo & Header */}
         <div className="text-center mb-8">
