@@ -10,6 +10,8 @@ import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { PhotoGallery } from '@/components/guest/PhotoGallery';
 import { HouseRules } from '@/components/guest/HouseRules';
+import { Announcements } from '@/components/guest/Announcements';
+import { RentDueAlert } from '@/components/guest/RentDueAlert';
 
 export default function GuestDashboard() {
   const { user } = useAuth();
@@ -92,6 +94,12 @@ export default function GuestDashboard() {
           <h1 className="text-2xl font-bold text-foreground">Welcome, {guest.full_name}!</h1>
           <p className="text-muted-foreground">Your PG at a glance</p>
         </div>
+
+        {/* Rent Due Alert */}
+        <RentDueAlert guestId={guest.id} />
+
+        {/* Announcements */}
+        <Announcements pgId={guest.pg_id} />
 
         {/* Rent Status Card - Hero */}
         <Card className="premium-card border-border/30 bg-gradient-to-br from-card via-card to-primary/5 overflow-hidden">
