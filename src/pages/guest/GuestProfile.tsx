@@ -109,14 +109,11 @@ export default function GuestProfile() {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('documents')
-        .getPublicUrl(fileName);
-
+      // Store the file path instead of public URL since bucket is private
       const { error: dbError } = await supabase.from('documents').insert({
         guest_id: guest.id,
         document_type: docType,
-        document_url: publicUrl,
+        document_url: fileName, // Store file path for signed URL generation
       });
 
       if (dbError) throw dbError;
@@ -128,6 +125,20 @@ export default function GuestProfile() {
     } finally {
       setUploading(false);
     }
+  };
+
+  // Get signed URL for viewing documents
+  const handleViewDocument = async (filePath: string) => {
+    const { data, error } = await supabase.storage
+      .from('documents')
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
+    
+    if (error) {
+      toast({ title: 'Error', description: 'Could not access document', variant: 'destructive' });
+      return;
+    }
+    
+    window.open(data.signedUrl, '_blank');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -373,7 +384,7 @@ export default function GuestProfile() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => window.open(doc.document_url, '_blank')}
+                      onClick={() => handleViewDocument(doc.document_url)}
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
