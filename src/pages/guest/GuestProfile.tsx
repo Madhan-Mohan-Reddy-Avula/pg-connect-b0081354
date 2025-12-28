@@ -128,7 +128,15 @@ export default function GuestProfile() {
   };
 
   // Get signed URL for viewing documents
-  const handleViewDocument = async (filePath: string) => {
+  const handleViewDocument = async (documentUrl: string) => {
+    // Extract file path from full URL if needed (for backwards compatibility with old records)
+    let filePath = documentUrl;
+    
+    // Check if it's a full URL and extract the path
+    if (documentUrl.includes('/storage/v1/object/public/documents/')) {
+      filePath = documentUrl.split('/storage/v1/object/public/documents/')[1];
+    }
+    
     const { data, error } = await supabase.storage
       .from('documents')
       .createSignedUrl(filePath, 3600); // 1 hour expiry
