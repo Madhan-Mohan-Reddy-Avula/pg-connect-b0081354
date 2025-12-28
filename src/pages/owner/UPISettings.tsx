@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Upload, QrCode, CreditCard, CheckCircle, Settings } from "lucide-react";
+import { Loader2, Upload, QrCode, CreditCard, CheckCircle, Settings, Phone } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const UPI_PROVIDERS = [
@@ -32,6 +32,7 @@ const UPISettings = () => {
   const [upiQrUrl, setUpiQrUrl] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [upiProvider, setUpiProvider] = useState("ybl");
+  const [paymentPhone, setPaymentPhone] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -43,7 +44,7 @@ const UPISettings = () => {
     try {
       const { data: pg, error } = await supabase
         .from("pgs")
-        .select("id, upi_id, upi_qr_url")
+        .select("id, upi_id, upi_qr_url, payment_phone")
         .eq("owner_id", user?.id)
         .maybeSingle();
 
@@ -54,6 +55,7 @@ const UPISettings = () => {
         const savedUpiId = pg.upi_id || "";
         setUpiId(savedUpiId);
         setUpiQrUrl(pg.upi_qr_url || "");
+        setPaymentPhone(pg.payment_phone || "");
         
         // Parse saved UPI ID to extract phone number and provider
         if (savedUpiId.includes("@")) {
@@ -115,7 +117,11 @@ const UPISettings = () => {
 
       const { error } = await supabase
         .from("pgs")
-        .update({ upi_id: finalUpiId.trim(), upi_qr_url: upiQrUrl })
+        .update({ 
+          upi_id: finalUpiId.trim(), 
+          upi_qr_url: upiQrUrl,
+          payment_phone: paymentPhone.trim() || null
+        })
         .eq("id", pgId);
 
       if (error) throw error;
@@ -292,6 +298,42 @@ const UPISettings = () => {
                 <CheckCircle className="h-5 w-5 text-foreground" />
                 <span className="text-sm text-foreground">
                   UPI ID: <strong>{upiProvider === "custom" ? upiId : `${phoneNumber}@${upiProvider}`}</strong>
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Payment Phone Card */}
+        <Card className="premium-card">
+          <CardContent className="pt-6 pb-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Phone className="h-5 w-5 text-muted-foreground" />
+              <h3 className="font-semibold text-foreground">Payment Phone Number</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Provide an alternate phone number for guests to pay via PhonePe, GPay, etc.
+            </p>
+            
+            <div className="space-y-2">
+              <Label className="text-muted-foreground text-sm">Phone Number</Label>
+              <Input
+                placeholder="9876543210"
+                value={paymentPhone}
+                onChange={(e) => setPaymentPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                className="bg-muted/50 border-border/50 focus:border-foreground/50 text-foreground placeholder:text-muted-foreground"
+                maxLength={10}
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter 10-digit phone number linked to your payment apps
+              </p>
+            </div>
+
+            {paymentPhone.length === 10 && (
+              <div className="flex items-center gap-2 p-3 bg-foreground/5 rounded-lg border border-foreground/10">
+                <CheckCircle className="h-5 w-5 text-foreground" />
+                <span className="text-sm text-foreground">
+                  Phone: <strong>{paymentPhone}</strong>
                 </span>
               </div>
             )}

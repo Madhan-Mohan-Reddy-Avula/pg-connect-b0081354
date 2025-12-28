@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, QrCode, Upload, CheckCircle, Clock, XCircle, AlertCircle, ArrowRight, Smartphone, Download } from "lucide-react";
+import { Loader2, QrCode, Upload, CheckCircle, Clock, XCircle, AlertCircle, ArrowRight, Smartphone, Download, Phone } from "lucide-react";
 import { format } from "date-fns";
 import { generateRentReceipt } from "@/utils/generateRentReceipt";
 
@@ -70,7 +70,7 @@ const PayRent = () => {
 
       const { data: pg, error: pgError } = await supabase
         .from("pgs")
-        .select("id, name, address, city, owner_name, contact_number, upi_id, upi_qr_url")
+        .select("id, name, address, city, owner_name, contact_number, upi_id, upi_qr_url, payment_phone")
         .eq("id", guest.pg_id)
         .maybeSingle();
 
@@ -244,7 +244,7 @@ const PayRent = () => {
     );
   }
 
-  if (!guestData?.pg?.upi_id) {
+  if (!guestData?.pg?.upi_id && !guestData?.pg?.payment_phone) {
     return (
       <DashboardLayout>
         <div className="min-h-[60vh] flex items-center justify-center p-6">
@@ -298,14 +298,30 @@ const PayRent = () => {
               )}
               
               {/* UPI ID */}
-              <div className="flex-1 text-center md:text-left">
-                <div className="flex items-center gap-2 justify-center md:justify-start mb-2">
-                  <QrCode className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">UPI ID</span>
-                </div>
-                <p className="text-lg font-mono font-semibold text-foreground bg-muted px-4 py-2 rounded-lg inline-block">
-                  {guestData.pg.upi_id}
-                </p>
+              <div className="flex-1 text-center md:text-left space-y-3">
+                {guestData.pg.upi_id && (
+                  <div>
+                    <div className="flex items-center gap-2 justify-center md:justify-start mb-2">
+                      <QrCode className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">UPI ID</span>
+                    </div>
+                    <p className="text-lg font-mono font-semibold text-foreground bg-muted px-4 py-2 rounded-lg inline-block">
+                      {guestData.pg.upi_id}
+                    </p>
+                  </div>
+                )}
+                
+                {guestData.pg.payment_phone && (
+                  <div>
+                    <div className="flex items-center gap-2 justify-center md:justify-start mb-2">
+                      <Phone className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Payment Phone</span>
+                    </div>
+                    <p className="text-lg font-mono font-semibold text-foreground bg-muted px-4 py-2 rounded-lg inline-block">
+                      {guestData.pg.payment_phone}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

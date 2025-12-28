@@ -449,6 +449,7 @@ export type Database = {
           name: string
           owner_id: string
           owner_name: string
+          payment_phone: string | null
           updated_at: string
           upi_id: string | null
           upi_qr_url: string | null
@@ -464,6 +465,7 @@ export type Database = {
           name: string
           owner_id: string
           owner_name: string
+          payment_phone?: string | null
           updated_at?: string
           upi_id?: string | null
           upi_qr_url?: string | null
@@ -479,6 +481,7 @@ export type Database = {
           name?: string
           owner_id?: string
           owner_name?: string
+          payment_phone?: string | null
           updated_at?: string
           upi_id?: string | null
           upi_qr_url?: string | null
