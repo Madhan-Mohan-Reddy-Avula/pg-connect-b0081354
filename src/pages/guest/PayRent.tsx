@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { Loader2, QrCode, Upload, CheckCircle, Clock, XCircle, AlertCircle, ArrowRight, Smartphone, Download, Phone, Copy, Check } from "lucide-react";
 import { format } from "date-fns";
-import { generateRentReceipt } from "@/utils/generateRentReceipt";
+import ReceiptPreview from "@/components/guest/ReceiptPreview";
 
 // UPI app icons as simple SVGs
 const PhonePeIcon = () => (
@@ -55,6 +55,24 @@ const PayRent = () => {
   const [screenshotUrl, setScreenshotUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<{
+    open: boolean;
+    data: {
+      guestName: string;
+      guestPhone?: string;
+      pgName: string;
+      pgAddress: string;
+      pgCity?: string;
+      ownerName: string;
+      ownerContact?: string;
+      amount: number;
+      paymentPurpose?: string;
+      paymentMonth?: string | null;
+      transactionId?: string;
+      paymentDate?: string;
+      status?: string;
+    } | null;
+  }>({ open: false, data: null });
 
   const copyToClipboard = async (text: string, field: string) => {
     try {
@@ -633,20 +651,23 @@ const PayRent = () => {
                             size="sm"
                             className="text-xs text-muted-foreground hover:text-foreground"
                             onClick={() => {
-                              generateRentReceipt({
-                                guestName: guestData.guest.full_name,
-                                guestPhone: guestData.guest.phone,
-                                pgName: guestData.pg.name,
-                                pgAddress: guestData.pg.address,
-                                pgCity: guestData.pg.city,
-                                ownerName: guestData.pg.owner_name,
-                                ownerContact: guestData.pg.contact_number,
-                                amount: payment.amount,
-                                paymentPurpose: payment.payment_purpose,
-                                paymentMonth: payment.payment_month,
-                                transactionId: payment.upi_transaction_id,
-                                paymentDate: payment.created_at,
-                                status: payment.status,
+                              setReceiptPreview({
+                                open: true,
+                                data: {
+                                  guestName: guestData.guest.full_name,
+                                  guestPhone: guestData.guest.phone,
+                                  pgName: guestData.pg.name,
+                                  pgAddress: guestData.pg.address,
+                                  pgCity: guestData.pg.city,
+                                  ownerName: guestData.pg.owner_name,
+                                  ownerContact: guestData.pg.contact_number,
+                                  amount: payment.amount,
+                                  paymentPurpose: payment.payment_purpose,
+                                  paymentMonth: payment.payment_month,
+                                  transactionId: payment.upi_transaction_id,
+                                  paymentDate: payment.created_at,
+                                  status: payment.status,
+                                },
                               });
                             }}
                           >
@@ -662,6 +683,13 @@ const PayRent = () => {
             </div>
           )}
         </div>
+
+        {/* Receipt Preview Modal */}
+        <ReceiptPreview
+          open={receiptPreview.open}
+          onOpenChange={(open) => setReceiptPreview({ ...receiptPreview, open })}
+          data={receiptPreview.data}
+        />
       </div>
     </DashboardLayout>
   );
