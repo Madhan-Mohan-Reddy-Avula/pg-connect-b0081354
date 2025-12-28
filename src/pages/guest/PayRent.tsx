@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, QrCode, Upload, CheckCircle, Clock, XCircle, AlertCircle, ArrowRight, Smartphone, Download, Phone } from "lucide-react";
+import { Loader2, QrCode, Upload, CheckCircle, Clock, XCircle, AlertCircle, ArrowRight, Smartphone, Download, Phone, Copy, Check } from "lucide-react";
 import { format } from "date-fns";
 import { generateRentReceipt } from "@/utils/generateRentReceipt";
 
@@ -54,6 +54,25 @@ const PayRent = () => {
   const [transactionId, setTransactionId] = useState("");
   const [screenshotUrl, setScreenshotUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      toast({
+        title: "Copied!",
+        description: `${field} copied to clipboard`,
+      });
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Fetch guest and PG details
   const { data: guestData, isLoading: loadingGuest } = useQuery({
@@ -305,9 +324,23 @@ const PayRent = () => {
                       <QrCode className="h-5 w-5 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">UPI ID</span>
                     </div>
-                    <p className="text-lg font-mono font-semibold text-foreground bg-muted px-4 py-2 rounded-lg inline-block">
-                      {guestData.pg.upi_id}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-lg font-mono font-semibold text-foreground bg-muted px-4 py-2 rounded-lg">
+                        {guestData.pg.upi_id}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(guestData.pg.upi_id!, "UPI ID")}
+                        className="h-10 w-10 border-border/50 hover:bg-muted"
+                      >
+                        {copiedField === "UPI ID" ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 )}
                 
@@ -317,9 +350,23 @@ const PayRent = () => {
                       <Phone className="h-5 w-5 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">Payment Phone</span>
                     </div>
-                    <p className="text-lg font-mono font-semibold text-foreground bg-muted px-4 py-2 rounded-lg inline-block">
-                      {guestData.pg.payment_phone}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-lg font-mono font-semibold text-foreground bg-muted px-4 py-2 rounded-lg">
+                        {guestData.pg.payment_phone}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(guestData.pg.payment_phone!, "Phone Number")}
+                        className="h-10 w-10 border-border/50 hover:bg-muted"
+                      >
+                        {copiedField === "Phone Number" ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
