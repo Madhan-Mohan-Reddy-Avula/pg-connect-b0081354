@@ -417,17 +417,21 @@ const PayRent = () => {
             </div>
 
             {(() => {
-              // Generate proper UPI payment URL
+              // Generate proper UPI payment URL using payment phone number
               const payAmount = amount || guestData.guest.monthly_rent || '';
               const payeeName = encodeURIComponent(guestData.pg.name || 'PG Payment');
               
-              // Use contact number with @ybl suffix if UPI ID looks like a phone number, otherwise use as-is
-              let payeeAddress = guestData.pg.upi_id || '';
+              // Prefer payment_phone for UPI apps, fallback to upi_id
+              const paymentPhone = guestData.pg.payment_phone || '';
+              let payeeAddress = '';
               
-              // If the upi_id is just a phone number (10 digits), format it properly
-              const phoneOnly = payeeAddress.replace(/[^0-9]/g, '');
-              if (phoneOnly.length === 10 && !payeeAddress.includes('@')) {
+              if (paymentPhone) {
+                // Use payment phone number with @ybl suffix for UPI apps
+                const phoneOnly = paymentPhone.replace(/[^0-9]/g, '');
                 payeeAddress = `${phoneOnly}@ybl`;
+              } else if (guestData.pg.upi_id) {
+                // Fallback to UPI ID if payment phone not available
+                payeeAddress = guestData.pg.upi_id;
               }
               
               const upiUrl = `upi://pay?pa=${encodeURIComponent(payeeAddress)}&pn=${payeeName}&am=${payAmount}&cu=INR&tn=${encodeURIComponent('PG Rent Payment')}`;
