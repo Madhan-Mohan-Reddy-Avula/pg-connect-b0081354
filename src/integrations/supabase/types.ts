@@ -393,6 +393,50 @@ export type Database = {
           },
         ]
       }
+      notification_settings: {
+        Row: {
+          created_at: string
+          email_reminders_enabled: boolean
+          id: string
+          pg_id: string
+          reminder_days_before: number
+          reminder_email: string | null
+          reminder_phone: string | null
+          sms_reminders_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email_reminders_enabled?: boolean
+          id?: string
+          pg_id: string
+          reminder_days_before?: number
+          reminder_email?: string | null
+          reminder_phone?: string | null
+          sms_reminders_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email_reminders_enabled?: boolean
+          id?: string
+          pg_id?: string
+          reminder_days_before?: number
+          reminder_email?: string | null
+          reminder_phone?: string | null
+          sms_reminders_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_settings_pg_id_fkey"
+            columns: ["pg_id"]
+            isOneToOne: true
+            referencedRelation: "pgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pgs: {
         Row: {
           address: string

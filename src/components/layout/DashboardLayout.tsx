@@ -19,7 +19,8 @@ import {
   Moon,
   Sun,
   TrendingDown,
-  Megaphone
+  Megaphone,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +40,7 @@ const ownerNavItems = [
   { href: '/owner/upi', label: 'UPI', icon: QrCode },
   { href: '/owner/payments', label: 'Verify', icon: CheckSquare },
   { href: '/owner/complaints', label: 'Issues', icon: MessageSquare },
+  { href: '/owner/notifications', label: 'Alerts', icon: Settings },
 ];
 
 const guestNavItems = [
