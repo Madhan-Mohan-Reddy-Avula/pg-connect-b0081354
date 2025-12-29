@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { User, Phone, Mail, FileText, Upload, Eye, AlertCircle } from 'lucide-react';
+import { User, Phone, Mail, FileText, Upload, Eye, AlertCircle, Download, Trash2 } from 'lucide-react';
 
 interface Document {
   id: string;
@@ -127,26 +127,73 @@ export default function GuestProfile() {
     }
   };
 
+  // Helper to extract file path from document URL
+  const getFilePath = (documentUrl: string) => {
+    if (documentUrl.includes('/storage/v1/object/public/documents/')) {
+      return documentUrl.split('/storage/v1/object/public/documents/')[1];
+    }
+    return documentUrl;
+  };
+
   // Get signed URL for viewing documents
   const handleViewDocument = async (documentUrl: string) => {
-    // Extract file path from full URL if needed (for backwards compatibility with old records)
-    let filePath = documentUrl;
-    
-    // Check if it's a full URL and extract the path
-    if (documentUrl.includes('/storage/v1/object/public/documents/')) {
-      filePath = documentUrl.split('/storage/v1/object/public/documents/')[1];
-    }
-    
+    const filePath = getFilePath(documentUrl);
     const { data, error } = await supabase.storage
       .from('documents')
-      .createSignedUrl(filePath, 3600); // 1 hour expiry
+      .createSignedUrl(filePath, 3600);
     
     if (error) {
       toast({ title: 'Error', description: 'Could not access document', variant: 'destructive' });
       return;
     }
-    
     window.open(data.signedUrl, '_blank');
+  };
+
+  // Download document
+  const handleDownloadDocument = async (documentUrl: string, docType: string) => {
+    const filePath = getFilePath(documentUrl);
+    const { data, error } = await supabase.storage
+      .from('documents')
+      .download(filePath);
+    
+    if (error) {
+      toast({ title: 'Error', description: 'Could not download document', variant: 'destructive' });
+      return;
+    }
+    
+    const url = URL.createObjectURL(data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${docType}.${filePath.split('.').pop()}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Delete document
+  const handleDeleteDocument = async (docId: string, documentUrl: string) => {
+    const filePath = getFilePath(documentUrl);
+    
+    try {
+      const { error: storageError } = await supabase.storage
+        .from('documents')
+        .remove([filePath]);
+      
+      if (storageError) throw storageError;
+      
+      const { error: dbError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', docId);
+      
+      if (dbError) throw dbError;
+      
+      queryClient.invalidateQueries({ queryKey: ['guest-documents'] });
+      toast({ title: 'Document deleted', description: 'Your document has been deleted successfully' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -389,13 +436,33 @@ export default function GuestProfile() {
                         </p>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleViewDocument(doc.document_url)}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewDocument(doc.document_url)}
+                        title="View"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownloadDocument(doc.document_url, doc.document_type)}
+                        title="Download"
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteDocument(doc.id, doc.document_url)}
+                        title="Delete"
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
