@@ -2,6 +2,7 @@ import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { 
   Building2, 
   LayoutDashboard, 
@@ -70,6 +71,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { role, signOut, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark');
@@ -107,6 +109,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const handleSignOut = async () => {
     navigate('/auth', { replace: true });
     await signOut();
+  };
+
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
   };
 
   return (
@@ -175,7 +181,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <Button 
               variant="ghost" 
               className="flex-1 justify-start text-muted-foreground hover:text-foreground hover:bg-secondary rounded-xl"
-              onClick={handleSignOut}
+              onClick={handleLogoutClick}
             >
               <LogOut className="w-5 h-5 mr-3" />
               Sign Out
@@ -204,7 +210,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleSignOut}
+            onClick={handleLogoutClick}
             className="text-muted-foreground hover:text-foreground"
           >
             <LogOut className="w-5 h-5" />
@@ -250,6 +256,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </div>
       </main>
+
+      {/* Logout Confirmation Dialog */}
+      <ConfirmationDialog
+        open={showLogoutConfirm}
+        onOpenChange={setShowLogoutConfirm}
+        title="Sign Out"
+        description="Are you sure you want to sign out? You will need to log in again to access your account."
+        confirmText="Sign Out"
+        cancelText="Cancel"
+        onConfirm={handleSignOut}
+        variant="destructive"
+      />
     </div>
   );
 }

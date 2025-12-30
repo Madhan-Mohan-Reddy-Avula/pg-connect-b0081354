@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, BedDouble, Edit2, Trash2, DoorOpen, Image } from 'lucide-react';
 import { MultiImageUpload } from '@/components/ui/image-upload';
@@ -31,6 +32,8 @@ export default function RoomsManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [roomImages, setRoomImages] = useState<string[]>([]);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
   const [formData, setFormData] = useState({
     room_number: '',
     floor: '',
@@ -179,6 +182,19 @@ export default function RoomsManagement() {
     } else {
       addRoomMutation.mutate({ ...formData, images: roomImages });
     }
+  };
+
+  const handleDeleteClick = (room: Room) => {
+    setRoomToDelete(room);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (roomToDelete) {
+      deleteRoomMutation.mutate(roomToDelete.id);
+    }
+    setDeleteConfirmOpen(false);
+    setRoomToDelete(null);
   };
 
   if (!pg) {
@@ -330,7 +346,7 @@ export default function RoomsManagement() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={() => deleteRoomMutation.mutate(room.id)}
+                          onClick={() => handleDeleteClick(room)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -361,6 +377,18 @@ export default function RoomsManagement() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete Room"
+        description={`Are you sure you want to delete Room ${roomToDelete?.room_number}? This will also remove all beds in this room. This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        variant="destructive"
+      />
     </DashboardLayout>
   );
 }

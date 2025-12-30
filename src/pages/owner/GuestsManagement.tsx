@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, User, Edit2, Trash2, Users, BedDouble, Phone, Mail, History, Clock, FileText, Download, Eye, CheckCircle2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -63,6 +64,9 @@ export default function GuestsManagement() {
   const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
   const [documentsDialogOpen, setDocumentsDialogOpen] = useState(false);
   const [selectedGuestForDocs, setSelectedGuestForDocs] = useState<Guest | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [vacateConfirmOpen, setVacateConfirmOpen] = useState(false);
+  const [selectedGuestForAction, setSelectedGuestForAction] = useState<Guest | null>(null);
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
@@ -499,6 +503,32 @@ export default function GuestsManagement() {
     }
   };
 
+  const handleDeleteClick = (guest: Guest) => {
+    setSelectedGuestForAction(guest);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleVacateClick = (guest: Guest) => {
+    setSelectedGuestForAction(guest);
+    setVacateConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedGuestForAction) {
+      deleteGuestMutation.mutate(selectedGuestForAction);
+    }
+    setDeleteConfirmOpen(false);
+    setSelectedGuestForAction(null);
+  };
+
+  const confirmVacate = () => {
+    if (selectedGuestForAction) {
+      vacateMutation.mutate(selectedGuestForAction);
+    }
+    setVacateConfirmOpen(false);
+    setSelectedGuestForAction(null);
+  };
+
   if (!pg) {
     return (
       <DashboardLayout>
@@ -700,7 +730,7 @@ export default function GuestsManagement() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => deleteGuestMutation.mutate(guest)}
+                        onClick={() => handleDeleteClick(guest)}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -741,7 +771,7 @@ export default function GuestsManagement() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => vacateMutation.mutate(guest)}
+                        onClick={() => handleVacateClick(guest)}
                       >
                         Mark Vacated
                       </Button>
@@ -880,6 +910,29 @@ export default function GuestsManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete Guest"
+        description={`Are you sure you want to delete ${selectedGuestForAction?.full_name}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        variant="destructive"
+      />
+
+      {/* Vacate Confirmation Dialog */}
+      <ConfirmationDialog
+        open={vacateConfirmOpen}
+        onOpenChange={setVacateConfirmOpen}
+        title="Mark Guest as Vacated"
+        description={`Are you sure you want to mark ${selectedGuestForAction?.full_name} as vacated? This will free up their assigned bed.`}
+        confirmText="Mark Vacated"
+        cancelText="Cancel"
+        onConfirm={confirmVacate}
+      />
     </DashboardLayout>
   );
 }

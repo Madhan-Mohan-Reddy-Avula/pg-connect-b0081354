@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Plus, Megaphone, Edit2, Trash2, AlertTriangle, Info, Bell } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
@@ -34,6 +35,8 @@ export default function AnnouncementsManagement() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [priority, setPriority] = useState("normal");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [announcementToDelete, setAnnouncementToDelete] = useState<Announcement | null>(null);
 
   // Fetch PG
   const { data: pg } = useQuery({
@@ -146,6 +149,19 @@ export default function AnnouncementsManagement() {
     setContent(announcement.content);
     setPriority(announcement.priority);
     setIsOpen(true);
+  };
+
+  const handleDeleteClick = (announcement: Announcement) => {
+    setAnnouncementToDelete(announcement);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (announcementToDelete) {
+      deleteMutation.mutate(announcementToDelete.id);
+    }
+    setDeleteConfirmOpen(false);
+    setAnnouncementToDelete(null);
   };
 
   const getPriorityConfig = (priorityValue: string) => {
@@ -306,7 +322,7 @@ export default function AnnouncementsManagement() {
                           variant="ghost"
                           size="icon"
                           className="text-destructive hover:text-destructive"
-                          onClick={() => deleteMutation.mutate(announcement.id)}
+                          onClick={() => handleDeleteClick(announcement)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -319,6 +335,18 @@ export default function AnnouncementsManagement() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete Announcement"
+        description={`Are you sure you want to delete "${announcementToDelete?.title}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        variant="destructive"
+      />
     </DashboardLayout>
   );
 }

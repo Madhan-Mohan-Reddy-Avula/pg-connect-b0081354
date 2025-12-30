@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Receipt, Edit2, Trash2, IndianRupee, Calendar, TrendingDown, Image as ImageIcon } from 'lucide-react';
 import { format } from 'date-fns';
@@ -49,6 +50,8 @@ export default function ExpensesManagement() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [filterMonth, setFilterMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -198,6 +201,19 @@ export default function ExpensesManagement() {
     } else {
       addExpenseMutation.mutate({ ...formData, receipt_url: receiptImage });
     }
+  };
+
+  const handleDeleteClick = (expense: Expense) => {
+    setExpenseToDelete(expense);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (expenseToDelete) {
+      deleteExpenseMutation.mutate(expenseToDelete.id);
+    }
+    setDeleteConfirmOpen(false);
+    setExpenseToDelete(null);
   };
 
   const totalExpenses = expenses?.reduce((sum, e) => sum + e.amount, 0) || 0;
@@ -451,7 +467,7 @@ export default function ExpensesManagement() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={() => deleteExpenseMutation.mutate(expense.id)}
+                          onClick={() => handleDeleteClick(expense)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -464,6 +480,18 @@ export default function ExpensesManagement() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete Expense"
+        description={`Are you sure you want to delete "${expenseToDelete?.title}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        variant="destructive"
+      />
     </DashboardLayout>
   );
 }

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { User, Phone, Mail, FileText, Upload, Eye, AlertCircle, Download, Trash2 } from 'lucide-react';
 
@@ -24,6 +25,8 @@ export default function GuestProfile() {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deleteDocConfirmOpen, setDeleteDocConfirmOpen] = useState(false);
+  const [docToDelete, setDocToDelete] = useState<Document | null>(null);
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
@@ -194,6 +197,19 @@ export default function GuestProfile() {
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
+  };
+
+  const handleDeleteDocClick = (doc: Document) => {
+    setDocToDelete(doc);
+    setDeleteDocConfirmOpen(true);
+  };
+
+  const confirmDeleteDoc = () => {
+    if (docToDelete) {
+      handleDeleteDocument(docToDelete.id, docToDelete.document_url);
+    }
+    setDeleteDocConfirmOpen(false);
+    setDocToDelete(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -456,7 +472,7 @@ export default function GuestProfile() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteDocument(doc.id, doc.document_url)}
+                        onClick={() => handleDeleteDocClick(doc)}
                         title="Delete"
                         className="text-destructive hover:text-destructive"
                       >
@@ -474,6 +490,18 @@ export default function GuestProfile() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Document Confirmation */}
+      <ConfirmationDialog
+        open={deleteDocConfirmOpen}
+        onOpenChange={setDeleteDocConfirmOpen}
+        title="Delete Document"
+        description={`Are you sure you want to delete this ${docToDelete?.document_type.replace('_', ' ')}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteDoc}
+        variant="destructive"
+      />
     </DashboardLayout>
   );
 }
