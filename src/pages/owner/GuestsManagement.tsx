@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, User, Edit2, Trash2, Users, BedDouble, Phone, Mail, History, Clock, FileText, Download, Eye } from 'lucide-react';
+import { Plus, User, Edit2, Trash2, Users, BedDouble, Phone, Mail, History, Clock, FileText, Download, Eye, CheckCircle2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Document {
@@ -98,6 +98,30 @@ export default function GuestsManagement() {
       return data as Guest[];
     },
     enabled: !!pg?.id,
+  });
+
+  // Fetch document counts for all guests
+  const { data: guestDocumentCounts } = useQuery({
+    queryKey: ['guest-document-counts', guests?.map(g => g.id)],
+    queryFn: async () => {
+      if (!guests || guests.length === 0) return {};
+      
+      const guestIds = guests.map(g => g.id);
+      const { data, error } = await supabase
+        .from('documents')
+        .select('guest_id')
+        .in('guest_id', guestIds);
+      
+      if (error) throw error;
+      
+      // Count documents per guest
+      const counts: Record<string, number> = {};
+      data?.forEach(doc => {
+        counts[doc.guest_id] = (counts[doc.guest_id] || 0) + 1;
+      });
+      return counts;
+    },
+    enabled: !!guests && guests.length > 0,
   });
 
   const { data: beds } = useQuery({
@@ -627,9 +651,22 @@ export default function GuestsManagement() {
                       </div>
                       <div>
                         <CardTitle className="text-base">{guest.full_name}</CardTitle>
-                        <Badge variant={guest.status === 'active' ? 'default' : 'secondary'}>
-                          {guest.status}
-                        </Badge>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant={guest.status === 'active' ? 'default' : 'secondary'}>
+                            {guest.status}
+                          </Badge>
+                          {guestDocumentCounts && guestDocumentCounts[guest.id] > 0 ? (
+                            <Badge variant="outline" className="text-green-600 border-green-600/50 bg-green-500/10">
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              ID Verified
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-amber-600 border-amber-600/50 bg-amber-500/10">
+                              <AlertCircle className="w-3 h-3 mr-1" />
+                              No ID
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex gap-1">
