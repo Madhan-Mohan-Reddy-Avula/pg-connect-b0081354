@@ -11,8 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, BedDouble, Edit2, Trash2, DoorOpen, Image } from 'lucide-react';
+import { Plus, BedDouble, Edit2, Trash2, DoorOpen, Image, Eye } from 'lucide-react';
 import { MultiImageUpload } from '@/components/ui/image-upload';
+import { RoomDetailDialog } from '@/components/rooms/RoomDetailDialog';
 
 interface Room {
   id: string;
@@ -20,8 +21,8 @@ interface Room {
   floor: string | null;
   beds_count: number;
   pg_id: string;
-  image_url?: string | null; // legacy single image
-  images?: string[]; // new multiple images
+  image_url?: string | null;
+  images?: string[];
   beds?: { id: string; bed_number: string; is_occupied: boolean }[];
 }
 
@@ -34,6 +35,8 @@ export default function RoomsManagement() {
   const [roomImages, setRoomImages] = useState<string[]>([]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [formData, setFormData] = useState({
     room_number: '',
     floor: '',
@@ -109,9 +112,10 @@ export default function RoomsManagement() {
     },
   });
 
-  // Update room mutation
+  // Update room mutation - also handles bed count changes
   const updateRoomMutation = useMutation({
-    mutationFn: async (data: { id: string; room_number: string; floor: string; beds_count: number; images: string[] }) => {
+    mutationFn: async (data: { id: string; room_number: string; floor: string; beds_count: number; images: string[]; currentBedsCount: number }) => {
+      // Update room details
       const { error } = await supabase
         .from('rooms')
         .update({
@@ -123,6 +127,38 @@ export default function RoomsManagement() {
         .eq('id', data.id);
       
       if (error) throw error;
+
+      // Handle bed count changes
+      const diff = data.beds_count - data.currentBedsCount;
+      
+      if (diff > 0) {
+        // Add new beds
+        const newBeds = Array.from({ length: diff }, (_, i) => ({
+          room_id: data.id,
+          bed_number: `Bed ${data.currentBedsCount + i + 1}`,
+        }));
+        const { error: bedsError } = await supabase.from('beds').insert(newBeds);
+        if (bedsError) throw bedsError;
+      } else if (diff < 0) {
+        // Remove excess beds (only unoccupied ones)
+        const { data: unoccupiedBeds, error: fetchError } = await supabase
+          .from('beds')
+          .select('id')
+          .eq('room_id', data.id)
+          .eq('is_occupied', false)
+          .limit(Math.abs(diff));
+        
+        if (fetchError) throw fetchError;
+        
+        if (unoccupiedBeds && unoccupiedBeds.length > 0) {
+          const bedIdsToDelete = unoccupiedBeds.map(b => b.id);
+          const { error: deleteError } = await supabase
+            .from('beds')
+            .delete()
+            .in('id', bedIdsToDelete);
+          if (deleteError) throw deleteError;
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
@@ -130,7 +166,7 @@ export default function RoomsManagement() {
       setEditingRoom(null);
       resetForm();
       setRoomImages([]);
-      toast({ title: 'Room updated', description: 'Room details updated successfully' });
+      toast({ title: 'Room updated', description: 'Room details and beds updated successfully' });
     },
     onError: (error: Error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -178,10 +214,21 @@ export default function RoomsManagement() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingRoom) {
-      updateRoomMutation.mutate({ id: editingRoom.id, ...formData, images: roomImages });
+      const currentBedsCount = editingRoom.beds?.length || editingRoom.beds_count;
+      updateRoomMutation.mutate({ 
+        id: editingRoom.id, 
+        ...formData, 
+        images: roomImages,
+        currentBedsCount 
+      });
     } else {
       addRoomMutation.mutate({ ...formData, images: roomImages });
     }
+  };
+
+  const handleViewRoom = (room: Room) => {
+    setSelectedRoom(room);
+    setIsDetailOpen(true);
   };
 
   const handleDeleteClick = (room: Room) => {
@@ -319,7 +366,11 @@ export default function RoomsManagement() {
               const totalBeds = room.beds?.length || 0;
               
               return (
-                <Card key={room.id} className="premium-card overflow-hidden">
+                <Card 
+                  key={room.id} 
+                  className="premium-card overflow-hidden cursor-pointer hover:border-primary/30 transition-all"
+                  onClick={() => handleViewRoom(room)}
+                >
                   {(room.images?.length || room.image_url) && (
                     <div className="aspect-video w-full">
                       <img src={room.images?.[0] || room.image_url || ''} alt={`Room ${room.room_number}`} className="w-full h-full object-cover" />
@@ -338,7 +389,15 @@ export default function RoomsManagement() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => handleOpenDialog(room)}
+                          onClick={(e) => { e.stopPropagation(); handleViewRoom(room); }}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => { e.stopPropagation(); handleOpenDialog(room); }}
                         >
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -346,7 +405,7 @@ export default function RoomsManagement() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={() => handleDeleteClick(room)}
+                          onClick={(e) => { e.stopPropagation(); handleDeleteClick(room); }}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -377,6 +436,13 @@ export default function RoomsManagement() {
           </div>
         )}
       </div>
+
+      {/* Room Detail Dialog */}
+      <RoomDetailDialog 
+        room={selectedRoom} 
+        open={isDetailOpen} 
+        onOpenChange={setIsDetailOpen} 
+      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmationDialog
