@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PGCONNECT</string>
+    <string name="title_activity_main">PGCONNECT</string>
+    <string name="package_name">com.gpconnect.com</string>
+    <string name="custom_url_scheme">com.gpconnect.com</string>
+</resources>
