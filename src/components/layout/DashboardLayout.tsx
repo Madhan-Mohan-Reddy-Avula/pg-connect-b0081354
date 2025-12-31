@@ -1,8 +1,10 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useManager } from '@/contexts/ManagerContext';
 import { Button } from '@/components/ui/button';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { Badge } from '@/components/ui/badge';
 import { 
   Building2, 
   LayoutDashboard, 
@@ -30,23 +32,35 @@ interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-const ownerNavItems = [
+// Permission keys mapped to nav items
+type PermissionKey = 'can_view_guests' | 'can_view_rents' | 'can_view_payments' | 'can_view_complaints' | 
+  'can_view_expenses' | 'can_view_rooms' | 'can_view_announcements' | 'can_view_analytics';
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  permission?: PermissionKey;
+  ownerOnly?: boolean;
+}
+
+const ownerNavItems: NavItem[] = [
   { href: '/owner', label: 'Home', icon: LayoutDashboard },
-  { href: '/owner/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/owner/pg', label: 'My PG', icon: Home },
-  { href: '/owner/rooms', label: 'Rooms', icon: BedDouble },
-  { href: '/owner/guests', label: 'Guests', icon: Users },
-  { href: '/owner/rents', label: 'Rent', icon: Receipt },
-  { href: '/owner/expenses', label: 'Expenses', icon: TrendingDown },
-  { href: '/owner/announcements', label: 'Announce', icon: Megaphone },
-  { href: '/owner/upi', label: 'UPI', icon: QrCode },
-  { href: '/owner/payments', label: 'Verify', icon: CheckSquare },
-  { href: '/owner/complaints', label: 'Issues', icon: MessageSquare },
-  { href: '/owner/managers', label: 'Managers', icon: UserCog },
-  { href: '/owner/notifications', label: 'Alerts', icon: Settings },
+  { href: '/owner/analytics', label: 'Analytics', icon: BarChart3, permission: 'can_view_analytics' },
+  { href: '/owner/pg', label: 'My PG', icon: Home, ownerOnly: true },
+  { href: '/owner/rooms', label: 'Rooms', icon: BedDouble, permission: 'can_view_rooms' },
+  { href: '/owner/guests', label: 'Guests', icon: Users, permission: 'can_view_guests' },
+  { href: '/owner/rents', label: 'Rent', icon: Receipt, permission: 'can_view_rents' },
+  { href: '/owner/expenses', label: 'Expenses', icon: TrendingDown, permission: 'can_view_expenses' },
+  { href: '/owner/announcements', label: 'Announce', icon: Megaphone, permission: 'can_view_announcements' },
+  { href: '/owner/upi', label: 'UPI', icon: QrCode, ownerOnly: true },
+  { href: '/owner/payments', label: 'Verify', icon: CheckSquare, permission: 'can_view_payments' },
+  { href: '/owner/complaints', label: 'Issues', icon: MessageSquare, permission: 'can_view_complaints' },
+  { href: '/owner/managers', label: 'Managers', icon: UserCog, ownerOnly: true },
+  { href: '/owner/notifications', label: 'Alerts', icon: Settings, ownerOnly: true },
 ];
 
-const guestNavItems = [
+const guestNavItems: NavItem[] = [
   { href: '/guest', label: 'Home', icon: LayoutDashboard },
   { href: '/guest/profile', label: 'Profile', icon: User },
   { href: '/guest/pay', label: 'Pay', icon: Wallet },
@@ -54,15 +68,15 @@ const guestNavItems = [
 ];
 
 // Bottom nav items (max 5 for mobile)
-const ownerBottomNav = [
+const ownerBottomNav: NavItem[] = [
   { href: '/owner', label: 'Home', icon: LayoutDashboard },
-  { href: '/owner/guests', label: 'Guests', icon: Users },
-  { href: '/owner/payments', label: 'Verify', icon: CheckSquare },
-  { href: '/owner/rents', label: 'Rent', icon: Receipt },
-  { href: '/owner/analytics', label: 'Stats', icon: BarChart3 },
+  { href: '/owner/guests', label: 'Guests', icon: Users, permission: 'can_view_guests' },
+  { href: '/owner/payments', label: 'Verify', icon: CheckSquare, permission: 'can_view_payments' },
+  { href: '/owner/rents', label: 'Rent', icon: Receipt, permission: 'can_view_rents' },
+  { href: '/owner/analytics', label: 'Stats', icon: BarChart3, permission: 'can_view_analytics' },
 ];
 
-const guestBottomNav = [
+const guestBottomNav: NavItem[] = [
   { href: '/guest', label: 'Home', icon: LayoutDashboard },
   { href: '/guest/pay', label: 'Pay', icon: Wallet },
   { href: '/guest/complaints', label: 'Issues', icon: MessageSquare },
@@ -71,6 +85,7 @@ const guestBottomNav = [
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { role, signOut, user } = useAuth();
+  const { isOwner, isManager, hasPermission, managerData } = useManager();
   const location = useLocation();
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -105,8 +120,33 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   };
 
-  const navItems = role === 'owner' ? ownerNavItems : guestNavItems;
-  const bottomNavItems = role === 'owner' ? ownerBottomNav : guestBottomNav;
+  // Filter nav items based on permissions for managers
+  const filteredNavItems = useMemo(() => {
+    const items = role === 'owner' ? ownerNavItems : guestNavItems;
+    if (role !== 'owner' || isOwner) return items;
+    
+    // Manager - filter based on permissions
+    return items.filter(item => {
+      if (item.ownerOnly) return false;
+      if (!item.permission) return true;
+      return hasPermission(item.permission);
+    });
+  }, [role, isOwner, hasPermission]);
+
+  const filteredBottomNav = useMemo(() => {
+    const items = role === 'owner' ? ownerBottomNav : guestBottomNav;
+    if (role !== 'owner' || isOwner) return items;
+    
+    // Manager - filter based on permissions
+    return items.filter(item => {
+      if (item.ownerOnly) return false;
+      if (!item.permission) return true;
+      return hasPermission(item.permission);
+    });
+  }, [role, isOwner, hasPermission]);
+
+  const navItems = filteredNavItems;
+  const bottomNavItems = filteredBottomNav;
 
   const handleSignOut = async () => {
     navigate('/auth', { replace: true });
@@ -129,7 +169,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
             <div>
               <h1 className="font-bold text-lg text-foreground">PG Manager</h1>
-              <p className="text-xs text-muted-foreground capitalize">{role} Panel</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground capitalize">{isManager ? 'Manager' : role} Panel</p>
+                {isManager && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                    {managerData?.name}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         </div>

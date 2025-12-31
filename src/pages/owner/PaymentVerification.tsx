@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle, XCircle, Clock, Image, User, Phone, AlertTriangle, Filter, Search } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Clock, Image, User, Phone, AlertTriangle, Filter, Search, ArrowUpDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { format } from "date-fns";
@@ -37,6 +37,7 @@ const PaymentVerification = () => {
   const [rejectionReason, setRejectionReason] = useState("");
   const [statusFilter, setStatusFilter] = useState<PaymentStatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<'date' | 'amount' | 'name'>('date');
 
   const { data: payments, isLoading } = useQuery({
     queryKey: ["owner-payments", user?.id],
@@ -206,6 +207,17 @@ const PaymentVerification = () => {
               <SelectItem value="rejected">Rejected</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={sortBy} onValueChange={(v: 'date' | 'amount' | 'name') => setSortBy(v)}>
+            <SelectTrigger className="w-full sm:w-40 bg-secondary/50 border-border">
+              <ArrowUpDown className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="date">Latest First</SelectItem>
+              <SelectItem value="amount">Amount</SelectItem>
+              <SelectItem value="name">Name A-Z</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Filtered Payments */}
@@ -216,6 +228,10 @@ const PaymentVerification = () => {
               payment.guest?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
               payment.upi_transaction_id.toLowerCase().includes(searchQuery.toLowerCase());
             return matchesStatus && matchesSearch;
+          }).sort((a, b) => {
+            if (sortBy === 'amount') return b.amount - a.amount;
+            if (sortBy === 'name') return (a.guest?.full_name || '').localeCompare(b.guest?.full_name || '');
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
           }) || [];
 
           const filteredPending = filteredPayments.filter(p => p.status === "pending");

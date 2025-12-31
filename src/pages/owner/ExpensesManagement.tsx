@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Receipt, Edit2, Trash2, IndianRupee, Calendar, TrendingDown, Image as ImageIcon } from 'lucide-react';
+import { Plus, Receipt, Edit2, Trash2, IndianRupee, Calendar, TrendingDown, Image as ImageIcon, ArrowUpDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { ImageUpload } from '@/components/ui/image-upload';
 
@@ -51,6 +51,7 @@ export default function ExpensesManagement() {
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [filterMonth, setFilterMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'date' | 'amount' | 'category'>('date');
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [formData, setFormData] = useState({
     title: '',
@@ -337,15 +338,28 @@ export default function ExpensesManagement() {
           </Dialog>
         </div>
 
-        {/* Month Filter */}
-        <div className="flex items-center gap-3">
-          <Label className="text-muted-foreground">Filter by month:</Label>
-          <Input
-            type="month"
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-            className="w-48 bg-secondary/50 border-border"
-          />
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex items-center gap-3 flex-1">
+            <Label className="text-muted-foreground whitespace-nowrap">Filter by month:</Label>
+            <Input
+              type="month"
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="w-48 bg-secondary/50 border-border"
+            />
+          </div>
+          <Select value={sortBy} onValueChange={(v: 'date' | 'amount' | 'category') => setSortBy(v)}>
+            <SelectTrigger className="w-full sm:w-40 bg-secondary/50 border-border">
+              <ArrowUpDown className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="date">Latest First</SelectItem>
+              <SelectItem value="amount">Amount High-Low</SelectItem>
+              <SelectItem value="category">Category A-Z</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Stats */}
@@ -418,7 +432,11 @@ export default function ExpensesManagement() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {expenses?.map((expense) => (
+            {[...expenses!].sort((a, b) => {
+              if (sortBy === 'amount') return b.amount - a.amount;
+              if (sortBy === 'category') return a.category.localeCompare(b.category);
+              return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            }).map((expense) => (
               <Card key={expense.id} className="premium-card">
                 <CardContent className="p-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, Clock, CheckCircle2, User, Filter, Search } from 'lucide-react';
+import { MessageSquare, Clock, CheckCircle2, User, Filter, Search, ArrowUpDown } from 'lucide-react';
 import { format } from 'date-fns';
 
 type ComplaintStatusFilter = 'all' | 'open' | 'closed';
@@ -29,6 +29,7 @@ export default function OwnerComplaints() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<ComplaintStatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
 
   const { data: pg } = useQuery({
     queryKey: ['owner-pg', user?.id],
@@ -148,6 +149,16 @@ export default function OwnerComplaints() {
               <SelectItem value="closed">Closed</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={sortBy} onValueChange={(v: 'date' | 'name') => setSortBy(v)}>
+            <SelectTrigger className="w-full sm:w-40 bg-secondary/50 border-border">
+              <ArrowUpDown className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="date">Latest First</SelectItem>
+              <SelectItem value="name">Name A-Z</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Complaints List */}
@@ -168,6 +179,9 @@ export default function OwnerComplaints() {
               complaint.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
               complaint.guest?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
             return matchesStatus && matchesSearch;
+          }).sort((a, b) => {
+            if (sortBy === 'name') return (a.guest?.full_name || '').localeCompare(b.guest?.full_name || '');
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
           });
 
           if (filteredComplaints?.length === 0) {
