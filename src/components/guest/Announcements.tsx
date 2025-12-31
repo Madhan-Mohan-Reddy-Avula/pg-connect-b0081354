@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Megaphone, AlertTriangle, Info, Bell } from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
+import { Megaphone, AlertTriangle, Info, Bell, ChevronRight } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { Link } from "react-router-dom";
 
 interface AnnouncementsProps {
   pgId: string | undefined;
@@ -94,15 +93,23 @@ export function Announcements({ pgId }: AnnouncementsProps) {
 
   return (
     <div className="space-y-2">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground px-1">
-        <Megaphone className="w-4 h-4 text-primary" />
-        Announcements
-        {announcements.length > 1 && (
-          <span className="text-xs text-muted-foreground font-normal">
-            • Scroll for more →
-          </span>
-        )}
-      </h3>
+      <div className="flex items-center justify-between px-1">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Megaphone className="w-4 h-4 text-primary" />
+          Announcements
+          {announcements.length > 1 && (
+            <span className="text-xs text-muted-foreground font-normal">
+              • Scroll for more →
+            </span>
+          )}
+        </h3>
+        <Link 
+          to="/guest/announcements" 
+          className="text-xs text-primary hover:underline flex items-center gap-1"
+        >
+          View All <ChevronRight className="w-3 h-3" />
+        </Link>
+      </div>
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
         {announcements.map((announcement) => {
           const config = getPriorityConfig(announcement.priority);

@@ -26,6 +26,7 @@ import GuestDashboard from "./pages/guest/GuestDashboard";
 import GuestProfile from "./pages/guest/GuestProfile";
 import PayRent from "./pages/guest/PayRent";
 import GuestComplaints from "./pages/guest/GuestComplaints";
+import GuestAnnouncements from "./pages/guest/GuestAnnouncements";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +88,7 @@ function AppRoutes() {
       <Route path="/guest/profile" element={<ProtectedRoute allowedRole="guest"><GuestProfile /></ProtectedRoute>} />
       <Route path="/guest/pay" element={<ProtectedRoute allowedRole="guest"><PayRent /></ProtectedRoute>} />
       <Route path="/guest/complaints" element={<ProtectedRoute allowedRole="guest"><GuestComplaints /></ProtectedRoute>} />
+      <Route path="/guest/announcements" element={<ProtectedRoute allowedRole="guest"><GuestAnnouncements /></ProtectedRoute>} />
       
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
