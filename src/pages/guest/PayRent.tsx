@@ -399,6 +399,17 @@ const PayRent = () => {
               <Smartphone className="h-5 w-5 text-muted-foreground" />
               <h3 className="font-semibold text-foreground">Pay with App</h3>
             </div>
+            
+            {/* Warning Notice */}
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                <p className="text-sm text-red-500 font-medium">
+                  These UPI app options are currently not working. Please use manual payment below.
+                </p>
+              </div>
+            </div>
+            
             <p className="text-sm text-muted-foreground mb-4">
               Click to open app with amount pre-filled
             </p>
