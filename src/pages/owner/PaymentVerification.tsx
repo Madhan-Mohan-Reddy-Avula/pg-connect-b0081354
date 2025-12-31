@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle, XCircle, Clock, Image, User, Phone, AlertTriangle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Clock, Image, User, Phone, AlertTriangle, Filter, Search } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { format } from "date-fns";
 
@@ -28,10 +29,14 @@ interface Payment {
   };
 }
 
+type PaymentStatusFilter = 'all' | 'pending' | 'verified' | 'rejected';
+
 const PaymentVerification = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [rejectionReason, setRejectionReason] = useState("");
+  const [statusFilter, setStatusFilter] = useState<PaymentStatusFilter>('all');
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: payments, isLoading } = useQuery({
     queryKey: ["owner-payments", user?.id],
@@ -178,189 +183,232 @@ const PaymentVerification = () => {
           </CardContent>
         </Card>
 
-        {/* Pending Payments */}
-        {pendingPayments.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-muted-foreground" />
-              <h3 className="text-lg font-semibold text-foreground">Pending Verification</h3>
-              <Badge className="bg-muted text-muted-foreground border-border border ml-auto">
-                {pendingPayments.length}
-              </Badge>
-            </div>
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by guest name or transaction ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-secondary/50 border-border"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={(v: PaymentStatusFilter) => setStatusFilter(v)}>
+            <SelectTrigger className="w-full sm:w-40 bg-secondary/50 border-border">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="verified">Verified</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Filtered Payments */}
+        {(() => {
+          const filteredPayments = payments?.filter(payment => {
+            const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
+            const matchesSearch = searchQuery === '' || 
+              payment.guest?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              payment.upi_transaction_id.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesStatus && matchesSearch;
+          }) || [];
+
+          const filteredPending = filteredPayments.filter(p => p.status === "pending");
+          const filteredProcessed = filteredPayments.filter(p => p.status !== "pending");
+
+          return (
+            <>
+              {/* Pending Payments */}
+              {filteredPending.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold text-foreground">Pending Verification</h3>
+                    <Badge className="bg-muted text-muted-foreground border-border border ml-auto">
+                      {filteredPending.length}
+                    </Badge>
+                  </div>
             
-            <div className="space-y-3">
-              {pendingPayments.map((payment, index) => (
-                <Card 
-                  key={payment.id} 
-                  className="premium-card border-foreground/20"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <CardContent className="py-4">
-                    <div className="space-y-4">
-                      {/* Guest Info */}
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                            <User className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-foreground">{payment.guest?.full_name}</p>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Phone className="h-3 w-3" />
-                              {payment.guest?.phone}
+                  <div className="space-y-3">
+                    {filteredPending.map((payment, index) => (
+                      <Card 
+                        key={payment.id} 
+                        className="premium-card border-foreground/20"
+                        style={{ animationDelay: `${index * 50}ms` }}
+                      >
+                        <CardContent className="py-4">
+                          <div className="space-y-4">
+                            {/* Guest Info */}
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                                  <User className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-foreground">{payment.guest?.full_name}</p>
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Phone className="h-3 w-3" />
+                                    {payment.guest?.phone}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xl font-bold text-foreground">₹{payment.amount.toLocaleString()}</p>
+                                <p className="text-xs text-muted-foreground capitalize">{payment.payment_purpose}</p>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-foreground">₹{payment.amount.toLocaleString()}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{payment.payment_purpose}</p>
-                        </div>
-                      </div>
 
-                      {/* Transaction Details */}
-                      <div className="bg-muted/50 rounded-lg p-3 space-y-1">
-                        <p className="text-xs text-muted-foreground">Transaction ID</p>
-                        <p className="font-mono text-sm text-foreground">{payment.upi_transaction_id}</p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {format(new Date(payment.created_at), "PPp")}
-                        </p>
-                      </div>
+                            {/* Transaction Details */}
+                            <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                              <p className="text-xs text-muted-foreground">Transaction ID</p>
+                              <p className="font-mono text-sm text-foreground">{payment.upi_transaction_id}</p>
+                              <p className="text-xs text-muted-foreground mt-2">
+                                {format(new Date(payment.created_at), "PPp")}
+                              </p>
+                            </div>
 
-                      {/* Actions */}
-                      <div className="flex items-center gap-2">
-                        {payment.screenshot_url && (
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="border-border/50 text-muted-foreground hover:text-foreground">
-                                <Image className="h-4 w-4 mr-1" />
-                                View Proof
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="bg-card border-border max-w-md">
-                              <DialogHeader>
-                                <DialogTitle className="text-foreground">Payment Screenshot</DialogTitle>
-                              </DialogHeader>
-                              <img
-                                src={payment.screenshot_url}
-                                alt="Payment screenshot"
-                                className="w-full rounded-lg"
-                              />
-                            </DialogContent>
-                          </Dialog>
-                        )}
-                        
-                        <div className="flex-1" />
-                        
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="border-destructive/50 text-destructive hover:bg-destructive/10">
-                              <XCircle className="h-4 w-4 mr-1" />
-                              Reject
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="bg-card border-border">
-                            <DialogHeader>
-                              <DialogTitle className="text-foreground">Reject Payment</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <Input
-                                placeholder="Reason for rejection (optional)"
-                                value={rejectionReason}
-                                onChange={(e) => setRejectionReason(e.target.value)}
-                                className="bg-muted/50 border-border/50 text-foreground"
-                              />
+                            {/* Actions */}
+                            <div className="flex items-center gap-2">
+                              {payment.screenshot_url && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm" className="border-border/50 text-muted-foreground hover:text-foreground">
+                                      <Image className="h-4 w-4 mr-1" />
+                                      View Proof
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="bg-card border-border max-w-md">
+                                    <DialogHeader>
+                                      <DialogTitle className="text-foreground">Payment Screenshot</DialogTitle>
+                                    </DialogHeader>
+                                    <img
+                                      src={payment.screenshot_url}
+                                      alt="Payment screenshot"
+                                      className="w-full rounded-lg"
+                                    />
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+                              
+                              <div className="flex-1" />
+                              
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm" className="border-destructive/50 text-destructive hover:bg-destructive/10">
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Reject
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="bg-card border-border">
+                                  <DialogHeader>
+                                    <DialogTitle className="text-foreground">Reject Payment</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <Input
+                                      placeholder="Reason for rejection (optional)"
+                                      value={rejectionReason}
+                                      onChange={(e) => setRejectionReason(e.target.value)}
+                                      className="bg-muted/50 border-border/50 text-foreground"
+                                    />
+                                    <Button
+                                      variant="destructive"
+                                      className="w-full"
+                                      onClick={() => {
+                                        updatePaymentMutation.mutate({
+                                          id: payment.id,
+                                          status: "rejected",
+                                          reason: rejectionReason,
+                                        });
+                                      }}
+                                      disabled={updatePaymentMutation.isPending}
+                                    >
+                                      {updatePaymentMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                                      Confirm Rejection
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                              
                               <Button
-                                variant="destructive"
-                                className="w-full"
-                                onClick={() => {
-                                  updatePaymentMutation.mutate({
-                                    id: payment.id,
-                                    status: "rejected",
-                                    reason: rejectionReason,
-                                  });
-                                }}
+                                size="sm"
+                                className="bg-foreground hover:bg-foreground/90 text-background"
+                                onClick={() => updatePaymentMutation.mutate({ id: payment.id, status: "verified" })}
                                 disabled={updatePaymentMutation.isPending}
                               >
-                                {updatePaymentMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                                Confirm Rejection
+                                {updatePaymentMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                ) : (
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                )}
+                                Verify
                               </Button>
                             </div>
-                          </DialogContent>
-                        </Dialog>
-                        
-                        <Button
-                          size="sm"
-                          className="bg-foreground hover:bg-foreground/90 text-background"
-                          onClick={() => updatePaymentMutation.mutate({ id: payment.id, status: "verified" })}
-                          disabled={updatePaymentMutation.isPending}
-                        >
-                          {updatePaymentMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                          ) : (
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                          )}
-                          Verify
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Payment History */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-foreground">Payment History</h3>
-          
-          {processedPayments.length === 0 ? (
-            <Card className="premium-card">
-              <CardContent className="py-12 text-center">
-                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
-                  <Clock className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
-                <p className="text-muted-foreground">No payment history yet</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {processedPayments.map((payment, index) => (
-                <Card 
-                  key={payment.id} 
-                  className="premium-card"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <CardContent className="py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                          <User className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">{payment.guest?.full_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            ₹{payment.amount.toLocaleString()} • {payment.payment_purpose}
-                          </p>
-                          <p className="text-xs text-muted-foreground font-mono">
-                            {payment.upi_transaction_id}
-                          </p>
-                        </div>
+              )}
+
+              {/* Payment History */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground">Payment History</h3>
+                
+                {filteredProcessed.length === 0 ? (
+                  <Card className="premium-card">
+                    <CardContent className="py-12 text-center">
+                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                        <Clock className="h-6 w-6 text-muted-foreground" />
                       </div>
-                      <div className="text-right space-y-1">
-                        {getStatusBadge(payment.status)}
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(payment.created_at), "PP")}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+                      <p className="text-muted-foreground">No payment history yet</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredProcessed.map((payment, index) => (
+                      <Card 
+                        key={payment.id} 
+                        className="premium-card"
+                        style={{ animationDelay: `${index * 50}ms` }}
+                      >
+                        <CardContent className="py-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                                <User className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-foreground">{payment.guest?.full_name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  ₹{payment.amount.toLocaleString()} • {payment.payment_purpose}
+                                </p>
+                                <p className="text-xs text-muted-foreground font-mono">
+                                  {payment.upi_transaction_id}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right space-y-1">
+                              {getStatusBadge(payment.status)}
+                              <p className="text-xs text-muted-foreground">
+                                {format(new Date(payment.created_at), "PP")}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          );
+        })()}
       </div>
     </DashboardLayout>
   );

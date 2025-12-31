@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, User, Edit2, Trash2, Users, BedDouble, Phone, Mail, History, Clock, FileText, Download, Eye, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, User, Edit2, Trash2, Users, BedDouble, Phone, Mail, History, Clock, FileText, Download, Eye, CheckCircle2, AlertCircle, Search, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Document {
@@ -67,6 +67,8 @@ export default function GuestsManagement() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [vacateConfirmOpen, setVacateConfirmOpen] = useState(false);
   const [selectedGuestForAction, setSelectedGuestForAction] = useState<Guest | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'vacated'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
@@ -647,6 +649,30 @@ export default function GuestsManagement() {
           </Dialog>
         </div>
 
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-secondary/50 border-border"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={(v: 'all' | 'active' | 'vacated') => setStatusFilter(v)}>
+            <SelectTrigger className="w-full sm:w-40 bg-secondary/50 border-border">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Filter" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="all">All Guests</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="vacated">Vacated</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
@@ -657,21 +683,40 @@ export default function GuestsManagement() {
               </Card>
             ))}
           </div>
-        ) : guests?.length === 0 ? (
-          <Card className="premium-card">
-            <CardContent className="py-12 text-center">
-              <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No guests yet</h3>
-              <p className="text-muted-foreground mb-4">Add your first guest to get started</p>
-              <Button onClick={() => handleOpenDialog()} className="bg-foreground text-background hover:bg-foreground/90">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Guest
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {guests?.map((guest) => (
+        ) : (() => {
+          const filteredGuests = guests?.filter(guest => {
+            const matchesStatus = statusFilter === 'all' || guest.status === statusFilter;
+            const matchesSearch = searchQuery === '' || 
+              guest.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              guest.phone.includes(searchQuery);
+            return matchesStatus && matchesSearch;
+          });
+          
+          if (filteredGuests?.length === 0) {
+            return (
+              <Card className="premium-card">
+                <CardContent className="py-12 text-center">
+                  <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">
+                    {guests?.length === 0 ? 'No guests yet' : 'No matching guests'}
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    {guests?.length === 0 ? 'Add your first guest to get started' : 'Try adjusting your filters'}
+                  </p>
+                  {guests?.length === 0 && (
+                    <Button onClick={() => handleOpenDialog()} className="bg-foreground text-background hover:bg-foreground/90">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Guest
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          }
+          
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredGuests?.map((guest) => (
               <Card key={guest.id} className="premium-card">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -780,8 +825,9 @@ export default function GuestsManagement() {
                 </CardContent>
               </Card>
             ))}
-          </div>
-        )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Bed History Dialog */}

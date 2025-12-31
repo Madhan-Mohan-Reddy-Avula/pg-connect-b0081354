@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Receipt, Check, Clock, IndianRupee, Calendar, User, Download, AlertTriangle } from 'lucide-react';
+import { Plus, Receipt, Check, Clock, IndianRupee, Calendar, User, Download, AlertTriangle, Filter, Search } from 'lucide-react';
 import { generateRentReceipt } from '@/utils/generateRentReceipt';
 import { format, differenceInDays, isPast, isToday } from 'date-fns';
+
+type RentStatusFilter = 'all' | 'paid' | 'pending' | 'overdue';
 
 interface Rent {
   id: string;
@@ -37,6 +39,9 @@ export default function RentTracking() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<RentStatusFilter>('all');
+  const [monthFilter, setMonthFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState({
     guest_id: '',
     amount: 0,
@@ -365,6 +370,38 @@ export default function RentTracking() {
           </Card>
         </div>
 
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by guest name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-secondary/50 border-border"
+            />
+          </div>
+          <Input
+            type="month"
+            value={monthFilter}
+            onChange={(e) => setMonthFilter(e.target.value)}
+            placeholder="Filter by month"
+            className="w-full sm:w-40 bg-secondary/50 border-border"
+          />
+          <Select value={statusFilter} onValueChange={(v: RentStatusFilter) => setStatusFilter(v)}>
+            <SelectTrigger className="w-full sm:w-40 bg-secondary/50 border-border">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="overdue">Overdue</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Rent List */}
         {isLoading ? (
           <div className="space-y-4">
@@ -376,21 +413,45 @@ export default function RentTracking() {
               </Card>
             ))}
           </div>
-        ) : rents?.length === 0 ? (
-          <Card className="premium-card">
-            <CardContent className="py-12 text-center">
-              <Receipt className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No rent entries yet</h3>
-              <p className="text-muted-foreground mb-4">Add your first rent entry to start tracking</p>
-              <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} className="bg-foreground text-background hover:bg-foreground/90">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Rent Entry
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {rents?.map((rent) => {
+        ) : (() => {
+          const filteredRents = rents?.filter(rent => {
+            const statusInfo = getStatusInfo(rent);
+            const matchesSearch = searchQuery === '' || 
+              rent.guest?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesMonth = monthFilter === '' || 
+              format(new Date(rent.month), 'yyyy-MM') === monthFilter;
+            const matchesStatus = statusFilter === 'all' || 
+              (statusFilter === 'paid' && rent.status === 'paid') ||
+              (statusFilter === 'pending' && rent.status === 'pending' && statusInfo.status !== 'overdue') ||
+              (statusFilter === 'overdue' && statusInfo.status === 'overdue');
+            return matchesSearch && matchesMonth && matchesStatus;
+          });
+
+          if (filteredRents?.length === 0) {
+            return (
+              <Card className="premium-card">
+                <CardContent className="py-12 text-center">
+                  <Receipt className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">
+                    {rents?.length === 0 ? 'No rent entries yet' : 'No matching entries'}
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    {rents?.length === 0 ? 'Add your first rent entry to start tracking' : 'Try adjusting your filters'}
+                  </p>
+                  {rents?.length === 0 && (
+                    <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} className="bg-foreground text-background hover:bg-foreground/90">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Rent Entry
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          }
+
+          return (
+            <div className="space-y-3">
+              {filteredRents?.map((rent) => {
               const statusInfo = getStatusInfo(rent);
               return (
                 <Card 
@@ -500,8 +561,9 @@ export default function RentTracking() {
                 </Card>
               );
             })}
-          </div>
-        )}
+            </div>
+          );
+        })()}
       </div>
     </DashboardLayout>
   );

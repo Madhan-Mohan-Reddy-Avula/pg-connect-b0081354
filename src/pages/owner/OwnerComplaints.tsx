@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -5,9 +6,13 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, Clock, CheckCircle2, User } from 'lucide-react';
+import { MessageSquare, Clock, CheckCircle2, User, Filter, Search } from 'lucide-react';
 import { format } from 'date-fns';
+
+type ComplaintStatusFilter = 'all' | 'open' | 'closed';
 
 interface Complaint {
   id: string;
@@ -22,6 +27,8 @@ export default function OwnerComplaints() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState<ComplaintStatusFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: pg } = useQuery({
     queryKey: ['owner-pg', user?.id],
@@ -119,6 +126,30 @@ export default function OwnerComplaints() {
           </Card>
         </div>
 
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by title or guest name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-secondary/50 border-border"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={(v: ComplaintStatusFilter) => setStatusFilter(v)}>
+            <SelectTrigger className="w-full sm:w-40 bg-secondary/50 border-border">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="open">Open</SelectItem>
+              <SelectItem value="closed">Closed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Complaints List */}
         {isLoading ? (
           <div className="space-y-4">
@@ -130,17 +161,34 @@ export default function OwnerComplaints() {
               </Card>
             ))}
           </div>
-        ) : complaints?.length === 0 ? (
-          <Card className="premium-card">
-            <CardContent className="py-12 text-center">
-              <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No complaints</h3>
-              <p className="text-muted-foreground">All your guests are happy!</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {complaints?.map((complaint) => (
+        ) : (() => {
+          const filteredComplaints = complaints?.filter(complaint => {
+            const matchesStatus = statusFilter === 'all' || complaint.status === statusFilter;
+            const matchesSearch = searchQuery === '' || 
+              complaint.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              complaint.guest?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesStatus && matchesSearch;
+          });
+
+          if (filteredComplaints?.length === 0) {
+            return (
+              <Card className="premium-card">
+                <CardContent className="py-12 text-center">
+                  <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">
+                    {complaints?.length === 0 ? 'No complaints' : 'No matching complaints'}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {complaints?.length === 0 ? 'All your guests are happy!' : 'Try adjusting your filters'}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          }
+
+          return (
+            <div className="space-y-4">
+              {filteredComplaints?.map((complaint) => (
               <Card key={complaint.id} className="premium-card">
                 <CardContent className="p-5">
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -192,9 +240,10 @@ export default function OwnerComplaints() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          );
+        })()}
       </div>
     </DashboardLayout>
   );
