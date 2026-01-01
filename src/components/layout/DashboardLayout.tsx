@@ -24,7 +24,8 @@ import {
   TrendingDown,
   Megaphone,
   Settings,
-  UserCog
+  UserCog,
+  Bell
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -57,7 +58,8 @@ const ownerNavItems: NavItem[] = [
   { href: '/owner/payments', label: 'Verify', icon: CheckSquare, permission: 'can_view_payments' },
   { href: '/owner/complaints', label: 'Issues', icon: MessageSquare, permission: 'can_view_complaints' },
   { href: '/owner/managers', label: 'Managers', icon: UserCog, ownerOnly: true },
-  { href: '/owner/notifications', label: 'Alerts', icon: Settings, ownerOnly: true },
+  { href: '/owner/notifications', label: 'Settings', icon: Settings, ownerOnly: true },
+  { href: '/owner/notification-center', label: 'Alerts', icon: Bell },
   { href: '/owner/profile', label: 'Profile', icon: User },
 ];
 
@@ -66,21 +68,22 @@ const guestNavItems: NavItem[] = [
   { href: '/guest/profile', label: 'Profile', icon: User },
   { href: '/guest/pay', label: 'Pay', icon: Wallet },
   { href: '/guest/complaints', label: 'Issues', icon: MessageSquare },
+  { href: '/guest/notifications', label: 'Alerts', icon: Bell },
 ];
 
 // Bottom nav items (max 5 for mobile)
 const ownerBottomNav: NavItem[] = [
   { href: '/owner', label: 'Home', icon: LayoutDashboard },
   { href: '/owner/guests', label: 'Guests', icon: Users, permission: 'can_view_guests' },
-  { href: '/owner/payments', label: 'Verify', icon: CheckSquare, permission: 'can_view_payments' },
   { href: '/owner/rents', label: 'Rent', icon: Receipt, permission: 'can_view_rents' },
-  { href: '/owner/analytics', label: 'Stats', icon: BarChart3, permission: 'can_view_analytics' },
+  { href: '/owner/notification-center', label: 'Alerts', icon: Settings },
+  { href: '/owner/profile', label: 'Profile', icon: User },
 ];
 
 const guestBottomNav: NavItem[] = [
   { href: '/guest', label: 'Home', icon: LayoutDashboard },
   { href: '/guest/pay', label: 'Pay', icon: Wallet },
-  { href: '/guest/complaints', label: 'Issues', icon: MessageSquare },
+  { href: '/guest/notifications', label: 'Alerts', icon: Settings },
   { href: '/guest/profile', label: 'Profile', icon: User },
 ];
 
