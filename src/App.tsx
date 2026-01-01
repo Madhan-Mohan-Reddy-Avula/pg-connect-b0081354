@@ -22,6 +22,8 @@ import ExpensesManagement from "./pages/owner/ExpensesManagement";
 import AnnouncementsManagement from "./pages/owner/AnnouncementsManagement";
 import NotificationSettings from "./pages/owner/NotificationSettings";
 import ManagersManagement from "./pages/owner/ManagersManagement";
+import OwnerProfile from "./pages/owner/OwnerProfile";
+import ManagerProfile from "./pages/owner/ManagerProfile";
 import GuestDashboard from "./pages/guest/GuestDashboard";
 import GuestProfile from "./pages/guest/GuestProfile";
 import PayRent from "./pages/guest/PayRent";
@@ -82,6 +84,8 @@ function AppRoutes() {
       <Route path="/owner/announcements" element={<ProtectedRoute allowedRole="owner"><AnnouncementsManagement /></ProtectedRoute>} />
       <Route path="/owner/notifications" element={<ProtectedRoute allowedRole="owner"><NotificationSettings /></ProtectedRoute>} />
       <Route path="/owner/managers" element={<ProtectedRoute allowedRole="owner"><ManagersManagement /></ProtectedRoute>} />
+      <Route path="/owner/profile" element={<ProtectedRoute allowedRole="owner"><OwnerProfile /></ProtectedRoute>} />
+      <Route path="/owner/manager-profile" element={<ProtectedRoute allowedRole="owner"><ManagerProfile /></ProtectedRoute>} />
       
       {/* Guest Routes */}
       <Route path="/guest" element={<ProtectedRoute allowedRole="guest"><GuestDashboard /></ProtectedRoute>} />

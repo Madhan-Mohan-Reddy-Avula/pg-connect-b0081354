@@ -58,6 +58,7 @@ const ownerNavItems: NavItem[] = [
   { href: '/owner/complaints', label: 'Issues', icon: MessageSquare, permission: 'can_view_complaints' },
   { href: '/owner/managers', label: 'Managers', icon: UserCog, ownerOnly: true },
   { href: '/owner/notifications', label: 'Alerts', icon: Settings, ownerOnly: true },
+  { href: '/owner/profile', label: 'Profile', icon: User },
 ];
 
 const guestNavItems: NavItem[] = [
@@ -125,11 +126,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const items = role === 'owner' ? ownerNavItems : guestNavItems;
     if (role !== 'owner' || isOwner) return items;
     
-    // Manager - filter based on permissions
+    // Manager - filter based on permissions and swap profile link
     return items.filter(item => {
       if (item.ownerOnly) return false;
       if (!item.permission) return true;
       return hasPermission(item.permission);
+    }).map(item => {
+      // Swap owner profile for manager profile
+      if (item.href === '/owner/profile') {
+        return { ...item, href: '/owner/manager-profile' };
+      }
+      return item;
     });
   }, [role, isOwner, hasPermission]);
 

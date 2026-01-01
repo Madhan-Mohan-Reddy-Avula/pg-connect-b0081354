@@ -10,9 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, QrCode, Upload, CheckCircle, Clock, XCircle, AlertCircle, ArrowRight, Smartphone, Download, Phone, Copy, Check } from "lucide-react";
+import { Loader2, QrCode, Upload, CheckCircle, Clock, XCircle, AlertCircle, ArrowRight, Smartphone, Download, Phone, Copy, Check, ImagePlus } from "lucide-react";
 import { format } from "date-fns";
 import ReceiptPreview from "@/components/guest/ReceiptPreview";
+import { pickImageFile } from "@/utils/filePicker";
 
 // UPI app icons as simple SVGs
 const PhonePeIcon = () => (
@@ -192,11 +193,34 @@ const PayRent = () => {
       return;
     }
 
+    await uploadScreenshotFile(file, file.name);
+  };
+
+  const handlePickFromGallery = async () => {
+    if (!guestData?.guest) return;
+
+    try {
+      const pickedFile = await pickImageFile();
+      if (!pickedFile) return;
+
+      await uploadScreenshotFile(pickedFile.blob, pickedFile.name);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to pick file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const uploadScreenshotFile = async (file: Blob, fileName: string) => {
+    if (!guestData?.guest) return;
+
     setUploading(true);
     try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `payment-${guestData.guest.id}-${Date.now()}.${fileExt}`;
-      const filePath = `screenshots/${fileName}`;
+      const fileExt = fileName.split(".").pop() || 'jpg';
+      const newFileName = `payment-${guestData.guest.id}-${Date.now()}.${fileExt}`;
+      const filePath = `screenshots/${newFileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("payment-screenshots")
@@ -566,21 +590,37 @@ const PayRent = () => {
                     </Button>
                   </div>
                 ) : (
-                  <div>
-                    <Label htmlFor="screenshot-upload" className="cursor-pointer">
-                      <div className="border-2 border-dashed border-border/50 rounded-xl p-6 text-center hover:border-foreground/30 transition-colors bg-muted/20">
-                        {uploading ? (
-                          <Loader2 className="h-8 w-8 animate-spin mx-auto text-foreground" />
-                        ) : (
-                          <>
-                            <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                            <p className="text-sm text-muted-foreground">
-                              Click to upload screenshot
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </Label>
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <Label htmlFor="screenshot-upload" className="cursor-pointer flex-1">
+                        <div className="border-2 border-dashed border-border/50 rounded-xl p-4 text-center hover:border-foreground/30 transition-colors bg-muted/20">
+                          {uploading ? (
+                            <Loader2 className="h-6 w-6 animate-spin mx-auto text-foreground" />
+                          ) : (
+                            <>
+                              <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                              <p className="text-xs text-muted-foreground">
+                                Choose File
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handlePickFromGallery}
+                        disabled={uploading}
+                        className="flex-1 h-auto border-2 border-dashed border-border/50 rounded-xl hover:border-foreground/30 bg-muted/20"
+                      >
+                        <div className="text-center py-2">
+                          <ImagePlus className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                          <p className="text-xs text-muted-foreground">
+                            From Gallery
+                          </p>
+                        </div>
+                      </Button>
+                    </div>
                     <Input
                       id="screenshot-upload"
                       type="file"
