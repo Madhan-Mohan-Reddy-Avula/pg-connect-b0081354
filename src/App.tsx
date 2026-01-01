@@ -21,6 +21,7 @@ import OwnerComplaints from "./pages/owner/OwnerComplaints";
 import ExpensesManagement from "./pages/owner/ExpensesManagement";
 import AnnouncementsManagement from "./pages/owner/AnnouncementsManagement";
 import NotificationSettings from "./pages/owner/NotificationSettings";
+import NotificationCenter from "./pages/owner/NotificationCenter";
 import ManagersManagement from "./pages/owner/ManagersManagement";
 import OwnerProfile from "./pages/owner/OwnerProfile";
 import ManagerProfile from "./pages/owner/ManagerProfile";
@@ -29,6 +30,7 @@ import GuestProfile from "./pages/guest/GuestProfile";
 import PayRent from "./pages/guest/PayRent";
 import GuestComplaints from "./pages/guest/GuestComplaints";
 import GuestAnnouncements from "./pages/guest/GuestAnnouncements";
+import GuestNotifications from "./pages/guest/GuestNotifications";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +85,7 @@ function AppRoutes() {
       <Route path="/owner/expenses" element={<ProtectedRoute allowedRole="owner"><ExpensesManagement /></ProtectedRoute>} />
       <Route path="/owner/announcements" element={<ProtectedRoute allowedRole="owner"><AnnouncementsManagement /></ProtectedRoute>} />
       <Route path="/owner/notifications" element={<ProtectedRoute allowedRole="owner"><NotificationSettings /></ProtectedRoute>} />
+      <Route path="/owner/notification-center" element={<ProtectedRoute allowedRole="owner"><NotificationCenter /></ProtectedRoute>} />
       <Route path="/owner/managers" element={<ProtectedRoute allowedRole="owner"><ManagersManagement /></ProtectedRoute>} />
       <Route path="/owner/profile" element={<ProtectedRoute allowedRole="owner"><OwnerProfile /></ProtectedRoute>} />
       <Route path="/owner/manager-profile" element={<ProtectedRoute allowedRole="owner"><ManagerProfile /></ProtectedRoute>} />
@@ -93,6 +96,7 @@ function AppRoutes() {
       <Route path="/guest/pay" element={<ProtectedRoute allowedRole="guest"><PayRent /></ProtectedRoute>} />
       <Route path="/guest/complaints" element={<ProtectedRoute allowedRole="guest"><GuestComplaints /></ProtectedRoute>} />
       <Route path="/guest/announcements" element={<ProtectedRoute allowedRole="guest"><GuestAnnouncements /></ProtectedRoute>} />
+      <Route path="/guest/notifications" element={<ProtectedRoute allowedRole="guest"><GuestNotifications /></ProtectedRoute>} />
       
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
