@@ -526,6 +526,7 @@ export type Database = {
       pgs: {
         Row: {
           address: string
+          avatar_url: string | null
           city: string
           contact_number: string
           created_at: string
@@ -542,6 +543,7 @@ export type Database = {
         }
         Insert: {
           address: string
+          avatar_url?: string | null
           city: string
           contact_number: string
           created_at?: string
@@ -558,6 +560,7 @@ export type Database = {
         }
         Update: {
           address?: string
+          avatar_url?: string | null
           city?: string
           contact_number?: string
           created_at?: string

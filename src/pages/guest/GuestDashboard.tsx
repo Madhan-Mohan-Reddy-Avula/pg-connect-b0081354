@@ -187,10 +187,22 @@ export default function GuestDashboard() {
         {pg && (
           <Card className="premium-card border-border/30">
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg text-foreground">
-                <Building2 className="w-5 h-5 text-primary" />
-                {pg.name}
-              </CardTitle>
+              <div className="flex items-center gap-4">
+                {pg.avatar_url ? (
+                  <img 
+                    src={pg.avatar_url} 
+                    alt={pg.name}
+                    className="w-14 h-14 rounded-full object-cover border-2 border-primary/20"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20">
+                    <Building2 className="w-7 h-7 text-primary" />
+                  </div>
+                )}
+                <CardTitle className="text-lg text-foreground">
+                  {pg.name}
+                </CardTitle>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
