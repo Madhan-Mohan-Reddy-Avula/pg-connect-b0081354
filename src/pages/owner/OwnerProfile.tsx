@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { User, Phone, Mail, Building2, Edit2, Save, X, BookOpen, Download, LogOut } from 'lucide-react';
+import { User, Phone, Mail, Building2, Edit2, Save, X, BookOpen, Download, LogOut, Camera } from 'lucide-react';
 import { generateUserManual } from '@/utils/generateUserManual';
+import { AvatarUpload } from '@/components/ui/avatar-upload';
 
 export default function OwnerProfile() {
   const { user, signOut } = useAuth();
@@ -82,6 +83,25 @@ export default function OwnerProfile() {
     },
   });
 
+  // Update PG avatar mutation
+  const updatePGAvatarMutation = useMutation({
+    mutationFn: async (avatarUrl: string | null) => {
+      if (!pg?.id) throw new Error('No PG found');
+      const { error } = await supabase
+        .from('pgs')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', pg.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner-pg'] });
+      queryClient.invalidateQueries({ queryKey: ['guest-pg'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateProfileMutation.mutate(formData);
@@ -94,6 +114,10 @@ export default function OwnerProfile() {
       phone: profile?.phone || '',
     });
     setIsEditing(false);
+  };
+
+  const handleAvatarChange = (url: string | null) => {
+    updatePGAvatarMutation.mutate(url);
   };
 
   if (loadingProfile || loadingPG) {
@@ -127,6 +151,31 @@ export default function OwnerProfile() {
             <Download className="w-4 h-4" />
           </Button>
         </div>
+
+        {/* PG Avatar Card */}
+        {pg && (
+          <Card className="premium-card">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Camera className="h-5 w-5" />
+                PG Profile Photo
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-4">
+              <AvatarUpload
+                bucket="pg-images"
+                folder={`avatars/${pg.id}`}
+                value={pg.avatar_url}
+                onChange={handleAvatarChange}
+                fallback={pg.name}
+                size="lg"
+              />
+              <p className="text-sm text-muted-foreground text-center">
+                This photo will be displayed to guests on their dashboard
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Profile Card */}
         <Card className="premium-card">
