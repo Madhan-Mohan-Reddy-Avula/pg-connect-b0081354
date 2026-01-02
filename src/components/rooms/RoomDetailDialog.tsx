@@ -76,7 +76,7 @@ export function RoomDetailDialog({ room, open, onOpenChange }: RoomDetailDialogP
     enabled: open && !!room?.beds?.length,
   });
 
-  // Fetch bed history for this room
+  // Fetch bed history for this room (only past guests who have vacated)
   const { data: bedHistory, isLoading: loadingHistory } = useQuery({
     queryKey: ['room-bed-history', room?.id],
     queryFn: async () => {
@@ -87,6 +87,7 @@ export function RoomDetailDialog({ room, open, onOpenChange }: RoomDetailDialogP
         .from('bed_history')
         .select('*, guest:guests(id, full_name, phone, status), bed:beds(bed_number)')
         .in('bed_id', bedIds)
+        .not('vacated_date', 'is', null) // Only show past guests who have vacated
         .order('assigned_date', { ascending: false });
       
       if (error) throw error;
