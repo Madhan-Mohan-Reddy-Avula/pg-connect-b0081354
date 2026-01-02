@@ -76,29 +76,39 @@ export function RoomDetailDialog({ room, open, onOpenChange }: RoomDetailDialogP
     enabled: open && !!room?.beds?.length,
   });
 
-  // Fetch bed history for this room (only past guests who have vacated)
-  const { data: bedHistory, isLoading: loadingHistory } = useQuery({
+  // Fetch bed history for this room (all assignments; we filter out current occupants in the UI)
+  const { data: bedHistoryAll, isLoading: loadingHistory } = useQuery({
     queryKey: ['room-bed-history', room?.id],
     queryFn: async () => {
       if (!room?.beds?.length) return [];
-      
-      const bedIds = room.beds.map(b => b.id);
+
+      const bedIds = room.beds.map((b) => b.id);
       const { data, error } = await supabase
         .from('bed_history')
         .select('*, guest:guests(id, full_name, phone, status), bed:beds(bed_number)')
         .in('bed_id', bedIds)
-        .not('vacated_date', 'is', null) // Only show past guests who have vacated
         .order('assigned_date', { ascending: false });
-      
+
       if (error) throw error;
-      return data as BedHistoryEntry[];
+      return (data || []) as BedHistoryEntry[];
     },
     enabled: open && !!room?.beds?.length,
   });
 
   if (!room) return null;
 
-  const occupiedBeds = room.beds?.filter(b => b.is_occupied).length || 0;
+  const currentGuestByBedId = new Map<string, string>();
+  (currentGuests || []).forEach((g) => {
+    if (g.bed_id) currentGuestByBedId.set(g.bed_id, g.id);
+  });
+
+  // History = everything except the current occupant's open-ended assignment record
+  const bedHistory = (bedHistoryAll || []).filter((entry) => {
+    const currentGuestId = currentGuestByBedId.get(entry.bed_id);
+    return !(currentGuestId && entry.guest_id === currentGuestId && entry.vacated_date == null);
+  });
+
+  const occupiedBeds = room.beds?.filter((b) => b.is_occupied).length || 0;
   const totalBeds = room.beds?.length || 0;
 
   return (
@@ -219,7 +229,7 @@ export function RoomDetailDialog({ room, open, onOpenChange }: RoomDetailDialogP
                           <span>
                             {entry.vacated_date 
                               ? format(new Date(entry.vacated_date), 'dd MMM yyyy')
-                              : 'Present'
+                              : 'Not set'
                             }
                           </span>
                         </div>
