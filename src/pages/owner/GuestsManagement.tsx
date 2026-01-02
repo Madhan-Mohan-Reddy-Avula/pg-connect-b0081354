@@ -238,6 +238,15 @@ export default function GuestsManagement() {
       if (error) throw error;
 
       if (data.bed_id) {
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Auto-close any previous open bed_history entries for this bed
+        await supabase
+          .from('bed_history')
+          .update({ vacated_date: today })
+          .eq('bed_id', data.bed_id)
+          .is('vacated_date', null);
+        
         // Update bed to occupied
         await supabase.from('beds').update({ is_occupied: true }).eq('id', data.bed_id);
         
@@ -246,7 +255,7 @@ export default function GuestsManagement() {
           bed_id: data.bed_id,
           guest_id: guest.id,
           pg_id: pg!.id,
-          assigned_date: new Date().toISOString().split('T')[0],
+          assigned_date: today,
         });
       }
 

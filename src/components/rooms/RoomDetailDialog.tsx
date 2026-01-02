@@ -3,10 +3,14 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { BedDouble, Users, Calendar, ArrowRight, History } from 'lucide-react';
+import { BedDouble, Users, Calendar, ArrowRight, History, LogOut } from 'lucide-react';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 interface Room {
   id: string;
@@ -54,6 +58,66 @@ interface BedHistoryEntry {
 }
 
 export function RoomDetailDialog({ room, open, onOpenChange }: RoomDetailDialogProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [vacateConfirmOpen, setVacateConfirmOpen] = useState(false);
+  const [selectedGuestForVacate, setSelectedGuestForVacate] = useState<GuestInfo | null>(null);
+
+  // Vacate mutation
+  const vacateMutation = useMutation({
+    mutationFn: async (guest: GuestInfo) => {
+      const vacateDate = new Date().toISOString().split('T')[0];
+      
+      const { error } = await supabase
+        .from('guests')
+        .update({
+          status: 'vacated',
+          vacate_date: vacateDate,
+          bed_id: null,
+        })
+        .eq('id', guest.id);
+
+      if (error) throw error;
+
+      if (guest.bed_id) {
+        // Free bed
+        await supabase.from('beds').update({ is_occupied: false }).eq('id', guest.bed_id);
+        
+        // Close history entry
+        await supabase
+          .from('bed_history')
+          .update({ vacated_date: vacateDate })
+          .eq('guest_id', guest.id)
+          .eq('bed_id', guest.bed_id)
+          .is('vacated_date', null);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['room-current-guests'] });
+      queryClient.invalidateQueries({ queryKey: ['room-bed-history'] });
+      queryClient.invalidateQueries({ queryKey: ['guests'] });
+      queryClient.invalidateQueries({ queryKey: ['all-beds'] });
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      toast({ title: 'Guest vacated', description: 'Guest has been vacated from this room' });
+      setVacateConfirmOpen(false);
+      setSelectedGuestForVacate(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const handleVacateClick = (guest: GuestInfo) => {
+    setSelectedGuestForVacate(guest);
+    setVacateConfirmOpen(true);
+  };
+
+  const confirmVacate = () => {
+    if (selectedGuestForVacate) {
+      vacateMutation.mutate(selectedGuestForVacate);
+    }
+  };
+
   // Fetch current guests in this room
   const { data: currentGuests, isLoading: loadingGuests } = useQuery({
     queryKey: ['room-current-guests', room?.id],
@@ -169,26 +233,37 @@ export function RoomDetailDialog({ room, open, onOpenChange }: RoomDetailDialogP
               </div>
             ) : (
               <div className="space-y-2">
-                {currentGuests?.map((guest) => (
-                  <Card key={guest.id} className="bg-secondary/30 border-border/30">
-                    <CardContent className="p-3 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{guest.full_name}</p>
-                        <p className="text-sm text-muted-foreground">{guest.phone}</p>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant="secondary" className="bg-primary/10 text-primary">
-                          {guest.bed_number}
-                        </Badge>
-                        {guest.check_in_date && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Since {format(new Date(guest.check_in_date), 'dd MMM yyyy')}
-                          </p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                  {currentGuests?.map((guest) => (
+                    <Card key={guest.id} className="bg-secondary/30 border-border/30">
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{guest.full_name}</p>
+                            <p className="text-sm text-muted-foreground">{guest.phone}</p>
+                          </div>
+                          <div className="text-right flex flex-col items-end gap-1">
+                            <Badge variant="secondary" className="bg-primary/10 text-primary">
+                              {guest.bed_number}
+                            </Badge>
+                            {guest.check_in_date && (
+                              <p className="text-xs text-muted-foreground">
+                                Since {format(new Date(guest.check_in_date), 'dd MMM yyyy')}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+                          onClick={() => handleVacateClick(guest)}
+                        >
+                          <LogOut className="w-4 h-4 mr-2" />
+                          Vacate Guest
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
               </div>
             )}
           </div>
@@ -242,6 +317,18 @@ export function RoomDetailDialog({ room, open, onOpenChange }: RoomDetailDialogP
           </div>
         </div>
       </DialogContent>
+
+      {/* Vacate Confirmation Dialog */}
+      <ConfirmationDialog
+        open={vacateConfirmOpen}
+        onOpenChange={setVacateConfirmOpen}
+        title="Vacate Guest"
+        description={`Are you sure you want to vacate ${selectedGuestForVacate?.full_name}? This will free their bed and mark them as vacated.`}
+        confirmText="Vacate"
+        cancelText="Cancel"
+        onConfirm={confirmVacate}
+        variant="destructive"
+      />
     </Dialog>
   );
 }
