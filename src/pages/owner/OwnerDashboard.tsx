@@ -6,6 +6,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import StatCard from '@/components/dashboard/StatCard';
 import BedOccupancyWidget from '@/components/dashboard/BedOccupancyWidget';
 import RentRemindersWidget from '@/components/dashboard/RentRemindersWidget';
+import { PGInfoCard } from '@/components/dashboard/PGInfoCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -56,6 +57,7 @@ export default function OwnerDashboard() {
   const [recentGuests, setRecentGuests] = useState<RecentGuest[]>([]);
   const [hasPG, setHasPG] = useState<boolean | null>(null);
   const [pgId, setPgId] = useState<string | null>(null);
+  const [pgData, setPgData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -64,29 +66,30 @@ export default function OwnerDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const { data: pgData } = await supabase.from('pgs').select('id').eq('owner_id', user?.id).maybeSingle();
-      setHasPG(!!pgData);
-      setPgId(pgData?.id || null);
-      if (!pgData) { setLoading(false); return; }
+      const { data: pgResult } = await supabase.from('pgs').select('*').eq('owner_id', user?.id).maybeSingle();
+      setHasPG(!!pgResult);
+      setPgId(pgResult?.id || null);
+      setPgData(pgResult);
+      if (!pgResult) { setLoading(false); return; }
 
       const currentMonth = format(new Date(), 'yyyy-MM');
       const monthStart = `${currentMonth}-01`;
       const monthEnd = `${currentMonth}-31`;
 
-      const { count: roomsCount } = await supabase.from('rooms').select('*', { count: 'exact', head: true }).eq('pg_id', pgData.id);
-      const { data: bedsData } = await supabase.from('beds').select('id, is_occupied, room_id, rooms!inner(pg_id)').eq('rooms.pg_id', pgData.id);
+      const { count: roomsCount } = await supabase.from('rooms').select('*', { count: 'exact', head: true }).eq('pg_id', pgResult.id);
+      const { data: bedsData } = await supabase.from('beds').select('id, is_occupied, room_id, rooms!inner(pg_id)').eq('rooms.pg_id', pgResult.id);
       const totalBeds = bedsData?.length || 0;
       const occupiedBeds = bedsData?.filter(b => b.is_occupied).length || 0;
-      const { data: guestsData } = await supabase.from('guests').select('id, full_name, status, check_in_date').eq('pg_id', pgData.id).eq('status', 'active').order('created_at', { ascending: false }).limit(5);
-      const { count: pendingRents } = await supabase.from('rents').select('*, guests!inner(pg_id)', { count: 'exact', head: true }).eq('guests.pg_id', pgData.id).eq('status', 'pending');
-      const { count: openComplaints } = await supabase.from('complaints').select('*', { count: 'exact', head: true }).eq('pg_id', pgData.id).eq('status', 'open');
+      const { data: guestsData } = await supabase.from('guests').select('id, full_name, status, check_in_date').eq('pg_id', pgResult.id).eq('status', 'active').order('created_at', { ascending: false }).limit(5);
+      const { count: pendingRents } = await supabase.from('rents').select('*, guests!inner(pg_id)', { count: 'exact', head: true }).eq('guests.pg_id', pgResult.id).eq('status', 'pending');
+      const { count: openComplaints } = await supabase.from('complaints').select('*', { count: 'exact', head: true }).eq('pg_id', pgResult.id).eq('status', 'open');
       
       // Fetch monthly expenses
-      const { data: expensesData } = await supabase.from('expenses').select('amount').eq('pg_id', pgData.id).gte('expense_month', monthStart).lte('expense_month', monthEnd);
+      const { data: expensesData } = await supabase.from('expenses').select('amount').eq('pg_id', pgResult.id).gte('expense_month', monthStart).lte('expense_month', monthEnd);
       const monthlyExpenses = expensesData?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
       
       // Fetch monthly rent collected
-      const { data: rentsData } = await supabase.from('rents').select('amount, guests!inner(pg_id)').eq('guests.pg_id', pgData.id).eq('status', 'paid').gte('month', monthStart).lte('month', monthEnd);
+      const { data: rentsData } = await supabase.from('rents').select('amount, guests!inner(pg_id)').eq('guests.pg_id', pgResult.id).eq('status', 'paid').gte('month', monthStart).lte('month', monthEnd);
       const monthlyCollected = rentsData?.reduce((sum, r) => sum + Number(r.amount), 0) || 0;
 
       setStats({ totalRooms: roomsCount || 0, totalBeds, occupiedBeds, activeGuests: guestsData?.length || 0, pendingRents: pendingRents || 0, openComplaints: openComplaints || 0, monthlyExpenses, monthlyCollected });
@@ -138,6 +141,14 @@ export default function OwnerDashboard() {
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">Your PG at a glance</p>
         </div>
+
+        {/* PG Info Card */}
+        {pgData && (
+          <PGInfoCard 
+            pg={pgData} 
+            stats={stats}
+          />
+        )}
 
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           <StatCard title="Total Rooms" value={stats.totalRooms} icon={<Home className="w-6 h-6" />} color="primary" />

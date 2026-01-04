@@ -14,6 +14,7 @@ import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, User, Edit2, Trash2, Users, BedDouble, Phone, Mail, History, Clock, FileText, Download, Eye, CheckCircle2, AlertCircle, Search, Filter, ArrowUpDown } from 'lucide-react';
 import { format } from 'date-fns';
+import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 
 interface Document {
   id: string;
@@ -572,7 +573,12 @@ export default function GuestsManagement() {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="full_name">Full Name</Label>
+                  <LabelWithTooltip 
+                    label="Full Name" 
+                    required 
+                    htmlFor="full_name"
+                    tooltip="Enter the guest's legal name as per ID proof. This will be used for rent receipts and records."
+                  />
                   <Input
                     id="full_name"
                     value={formData.full_name}
@@ -584,7 +590,12 @@ export default function GuestsManagement() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
+                    <LabelWithTooltip 
+                      label="Phone" 
+                      required 
+                      htmlFor="phone"
+                      tooltip="Primary contact number. Used for login and rent reminders."
+                    />
                     <Input
                       id="phone"
                       value={formData.phone}
@@ -595,7 +606,11 @@ export default function GuestsManagement() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email (Optional)</Label>
+                    <LabelWithTooltip 
+                      label="Email" 
+                      htmlFor="email"
+                      tooltip="Optional. If provided, guest can login using email and receive payment receipts."
+                    />
                     <Input
                       id="email"
                       type="email"
@@ -607,7 +622,11 @@ export default function GuestsManagement() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bed_id">Assign Bed</Label>
+                  <LabelWithTooltip 
+                    label="Assign Bed" 
+                    htmlFor="bed_id"
+                    tooltip="Select a bed to assign. Only unoccupied beds are shown. Changing bed will auto-update history."
+                  />
                   <Select
                     value={formData.bed_id}
                     onValueChange={(value) => setFormData({ ...formData, bed_id: value })}
@@ -623,9 +642,15 @@ export default function GuestsManagement() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">Leave empty if bed not yet decided</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="monthly_rent">Monthly Rent (₹)</Label>
+                  <LabelWithTooltip 
+                    label="Monthly Rent (₹)" 
+                    required 
+                    htmlFor="monthly_rent"
+                    tooltip="The monthly rent amount for this guest. This is used to generate rent records and receipts."
+                  />
                   <Input
                     id="monthly_rent"
                     type="number"
@@ -637,7 +662,11 @@ export default function GuestsManagement() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="emergency_contact">Emergency Contact (Optional)</Label>
+                  <LabelWithTooltip 
+                    label="Emergency Contact" 
+                    htmlFor="emergency_contact"
+                    tooltip="Contact number of a family member or guardian. Useful for emergencies."
+                  />
                   <Input
                     id="emergency_contact"
                     value={formData.emergency_contact}
