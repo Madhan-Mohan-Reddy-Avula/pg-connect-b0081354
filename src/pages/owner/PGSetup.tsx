@@ -6,13 +6,13 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, Building2, Image, BookOpen, Download } from 'lucide-react';
 import { generateUserManual } from '@/utils/generateUserManual';
 import { z } from 'zod';
 import { MultiImageUpload } from '@/components/ui/image-upload';
+import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 
 const pgSchema = z.object({
   name: z.string().min(2, 'PG name is required').max(100),
@@ -220,7 +220,12 @@ export default function PGSetup() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-foreground">PG Name *</Label>
+                  <LabelWithTooltip 
+                    label="PG Name" 
+                    required 
+                    htmlFor="name"
+                    tooltip="This name will be displayed to guests on their dashboard. Use a memorable name that identifies your property."
+                  />
                   <Input
                     id="name"
                     name="name"
@@ -233,7 +238,12 @@ export default function PGSetup() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="city" className="text-foreground">City *</Label>
+                  <LabelWithTooltip 
+                    label="City" 
+                    required 
+                    htmlFor="city"
+                    tooltip="The city where your PG is located. This helps guests identify the location."
+                  />
                   <Input
                     id="city"
                     name="city"
@@ -247,7 +257,12 @@ export default function PGSetup() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address" className="text-foreground">Full Address *</Label>
+                <LabelWithTooltip 
+                  label="Full Address" 
+                  required 
+                  htmlFor="address"
+                  tooltip="Enter the complete postal address including landmark. This helps guests locate your PG and is shown on their dashboard."
+                />
                 <Textarea
                   id="address"
                   name="address"
@@ -262,7 +277,12 @@ export default function PGSetup() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="owner_name" className="text-foreground">Owner Name *</Label>
+                  <LabelWithTooltip 
+                    label="Owner Name" 
+                    required 
+                    htmlFor="owner_name"
+                    tooltip="The name of the PG owner or manager. This is displayed to guests as the point of contact."
+                  />
                   <Input
                     id="owner_name"
                     name="owner_name"
@@ -275,7 +295,12 @@ export default function PGSetup() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="contact_number" className="text-foreground">Contact Number *</Label>
+                  <LabelWithTooltip 
+                    label="Contact Number" 
+                    required 
+                    htmlFor="contact_number"
+                    tooltip="Primary phone number for guests to contact. This will be visible on the guest dashboard for emergencies or queries."
+                  />
                   <Input
                     id="contact_number"
                     name="contact_number"
@@ -289,7 +314,11 @@ export default function PGSetup() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="house_rules" className="text-foreground">House Rules</Label>
+                <LabelWithTooltip 
+                  label="House Rules" 
+                  htmlFor="house_rules"
+                  tooltip="Define rules like rent due dates, visitor policies, noise restrictions, etc. These will be displayed to guests so they know your policies."
+                />
                 <Textarea
                   id="house_rules"
                   name="house_rules"
@@ -299,24 +328,29 @@ export default function PGSetup() {
                   rows={4}
                   className="bg-secondary/50 border-border"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Tip: Include rent payment deadlines, visitor hours, maintenance responsibilities, and checkout notice period.
+                </p>
                 {errors.house_rules && <p className="text-sm text-destructive">{errors.house_rules}</p>}
               </div>
 
               {/* PG Images */}
               <div className="space-y-2">
-                <Label className="text-foreground flex items-center gap-2">
-                  <Image className="w-4 h-4" />
-                  PG Images
-                </Label>
+                <LabelWithTooltip 
+                  label="PG Images" 
+                  tooltip="Upload photos of common areas, rooms, facilities, etc. These photos are visible to guests on their dashboard and help showcase your property."
+                />
                 <p className="text-sm text-muted-foreground">Add photos of your PG (visible to guests)</p>
                 <MultiImageUpload
                   bucket="pg-images"
                   folder={user?.id || 'unknown'}
                   values={pgImages}
                   onChange={setPgImages}
-                maxImages={15}
-              />
-              <p className="text-xs text-muted-foreground">You can add up to 15 photos</p>
+                  maxImages={15}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Tip: Add photos of common areas, kitchen, bathroom, and room examples. You can add up to 15 photos.
+                </p>
               </div>
 
               <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90" disabled={saving}>

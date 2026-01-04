@@ -6,7 +6,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
@@ -275,7 +275,12 @@ export default function RoomsManagement() {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="room_number">Room Number</Label>
+                  <LabelWithTooltip 
+                    label="Room Number" 
+                    required 
+                    htmlFor="room_number"
+                    tooltip="A unique identifier for this room (e.g., 101, A1, Ground-1). Used to identify the room in the system."
+                  />
                   <Input
                     id="room_number"
                     value={formData.room_number}
@@ -286,7 +291,11 @@ export default function RoomsManagement() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="floor">Floor (Optional)</Label>
+                  <LabelWithTooltip 
+                    label="Floor" 
+                    htmlFor="floor"
+                    tooltip="The floor where this room is located. Helps guests find their room easily."
+                  />
                   <Input
                     id="floor"
                     value={formData.floor}
@@ -296,7 +305,12 @@ export default function RoomsManagement() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="beds_count">Number of Beds</Label>
+                  <LabelWithTooltip 
+                    label="Number of Beds" 
+                    required 
+                    htmlFor="beds_count"
+                    tooltip="Total beds in this room. Beds are auto-created when you add a room. You can increase beds later, but reducing requires deleting unoccupied beds."
+                  />
                   <Input
                     id="beds_count"
                     type="number"
@@ -308,14 +322,14 @@ export default function RoomsManagement() {
                     required
                   />
                   {!editingRoom && (
-                    <p className="text-sm text-muted-foreground">Beds will be auto-generated</p>
+                    <p className="text-sm text-muted-foreground">Beds will be auto-generated as Bed 1, Bed 2, etc.</p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Image className="w-4 h-4" />
-                    Room Images (Up to 6)
-                  </Label>
+                  <LabelWithTooltip 
+                    label="Room Images (Up to 6)" 
+                    tooltip="Add photos of this room. These will be visible to guests on their dashboard. Good photos help attract tenants!"
+                  />
                   <MultiImageUpload
                     bucket="pg-images"
                     folder={user?.id || 'unknown'}

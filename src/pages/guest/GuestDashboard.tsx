@@ -5,7 +5,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Building2, BedDouble, Home, IndianRupee, Calendar, Phone, MapPin, ScrollText, Wallet, ArrowRight } from 'lucide-react';
+import { Building2, BedDouble, Home, IndianRupee, Calendar, Phone, MapPin, ScrollText, Wallet, ArrowRight, Clock, Image, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { PhotoGallery } from '@/components/guest/PhotoGallery';
@@ -185,7 +185,8 @@ export default function GuestDashboard() {
 
         {/* PG Details */}
         {pg && (
-          <Card className="premium-card border-border/30">
+          <Card className="premium-card border-border/30 overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-full -translate-y-1/2 translate-x-1/2" />
             <CardHeader className="pb-2">
               <div className="flex items-center gap-4">
                 {pg.avatar_url ? (
@@ -199,9 +200,12 @@ export default function GuestDashboard() {
                     <Building2 className="w-7 h-7 text-primary" />
                   </div>
                 )}
-                <CardTitle className="text-lg text-foreground">
-                  {pg.name}
-                </CardTitle>
+                <div>
+                  <CardTitle className="text-lg text-foreground">
+                    {pg.name}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">{pg.city}</p>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -211,7 +215,6 @@ export default function GuestDashboard() {
                   <div>
                     <p className="text-sm text-muted-foreground">Address</p>
                     <p className="font-medium text-foreground">{pg.address}</p>
-                    <p className="text-sm text-muted-foreground">{pg.city}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-secondary/30">
@@ -219,9 +222,33 @@ export default function GuestDashboard() {
                   <div>
                     <p className="text-sm text-muted-foreground">Contact</p>
                     <p className="font-medium text-foreground">{pg.owner_name}</p>
-                    <p className="text-sm text-muted-foreground">{pg.contact_number}</p>
+                    <a href={`tel:${pg.contact_number}`} className="text-sm text-primary hover:underline">
+                      {pg.contact_number}
+                    </a>
                   </div>
                 </div>
+              </div>
+              
+              {/* Additional PG Info */}
+              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border/20">
+                {pg.upi_id && (
+                  <Badge variant="outline" className="text-xs bg-primary/5">
+                    <IndianRupee className="w-3 h-3 mr-1" />
+                    Online Payment Available
+                  </Badge>
+                )}
+                {pg.images && pg.images.length > 0 && (
+                  <Badge variant="outline" className="text-xs">
+                    <Image className="w-3 h-3 mr-1" />
+                    {pg.images.length} Photos
+                  </Badge>
+                )}
+                {guest.check_in_date && (
+                  <Badge variant="secondary" className="text-xs ml-auto">
+                    <Clock className="w-3 h-3 mr-1" />
+                    Staying since {new Date(guest.check_in_date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                  </Badge>
+                )}
               </div>
             </CardContent>
           </Card>
