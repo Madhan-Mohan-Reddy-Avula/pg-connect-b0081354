@@ -274,7 +274,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </aside>
 
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50 px-4 flex items-center justify-between">
+      <header className="lg:hidden fixed top-0 left-0 right-0 bg-card border-b border-border z-50 px-4 flex items-center justify-between safe-area-pt" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 0.5rem)', height: 'calc(4rem + env(safe-area-inset-top, 0px))' }}>
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
             <Building2 className="w-4 h-4 text-primary-foreground" />
@@ -383,7 +383,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </nav>
 
       {/* Main Content */}
-      <main className="lg:ml-72 pt-16 lg:pt-0 pb-24 lg:pb-0 min-h-screen">
+      <main className="lg:ml-72 lg:pt-0 pb-24 lg:pb-0 min-h-screen" style={{ paddingTop: 'calc(4rem + env(safe-area-inset-top, 0px))' }}>
         <PullToRefresh onRefresh={handleRefresh} className="h-full">
           <div className="p-4 lg:p-8 max-w-7xl">
             {children}
