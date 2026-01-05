@@ -52,6 +52,13 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
     }
   }, [isRefreshing]);
 
+  const triggerHapticFeedback = useCallback(() => {
+    // Use the Vibration API if available (works on most mobile browsers)
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50); // Short 50ms vibration
+    }
+  }, []);
+
   const handleTouchEnd = useCallback(async () => {
     if (!isPulling.current) return;
     isPulling.current = false;
@@ -59,6 +66,9 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
     if (pullDistance >= threshold && !isRefreshing) {
       setIsRefreshing(true);
       setPullDistance(threshold);
+      
+      // Trigger haptic feedback when refresh starts
+      triggerHapticFeedback();
 
       try {
         if (onRefresh) {
@@ -76,7 +86,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
     } else {
       setPullDistance(0);
     }
-  }, [pullDistance, isRefreshing, onRefresh]);
+  }, [pullDistance, isRefreshing, onRefresh, triggerHapticFeedback]);
 
   const progress = Math.min(pullDistance / threshold, 1);
 
