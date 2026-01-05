@@ -5,6 +5,13 @@ import { useManager } from '@/contexts/ManagerContext';
 import { Button } from '@/components/ui/button';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Badge } from '@/components/ui/badge';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { 
   Building2, 
   LayoutDashboard, 
@@ -25,7 +32,9 @@ import {
   Megaphone,
   Settings,
   UserCog,
-  Bell
+  Bell,
+  Menu,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -71,19 +80,18 @@ const guestNavItems: NavItem[] = [
   { href: '/guest/notifications', label: 'Alerts', icon: Bell },
 ];
 
-// Bottom nav items (max 5 for mobile)
+// Bottom nav items (4 items + More menu for mobile)
 const ownerBottomNav: NavItem[] = [
   { href: '/owner', label: 'Home', icon: LayoutDashboard },
   { href: '/owner/guests', label: 'Guests', icon: Users, permission: 'can_view_guests' },
   { href: '/owner/rents', label: 'Rent', icon: Receipt, permission: 'can_view_rents' },
-  { href: '/owner/notification-center', label: 'Alerts', icon: Settings },
   { href: '/owner/profile', label: 'Profile', icon: User },
 ];
 
 const guestBottomNav: NavItem[] = [
   { href: '/guest', label: 'Home', icon: LayoutDashboard },
   { href: '/guest/pay', label: 'Pay', icon: Wallet },
-  { href: '/guest/notifications', label: 'Alerts', icon: Settings },
+  { href: '/guest/complaints', label: 'Issues', icon: MessageSquare },
   { href: '/guest/profile', label: 'Profile', icon: User },
 ];
 
@@ -93,6 +101,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark');
@@ -154,6 +163,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       return hasPermission(item.permission);
     });
   }, [role, isOwner, hasPermission]);
+
+  // Items that appear in "More" menu (all nav items not in bottom nav)
+  const moreMenuItems = useMemo(() => {
+    const bottomHrefs = new Set(filteredBottomNav.map(item => item.href));
+    return filteredNavItems.filter(item => !bottomHrefs.has(item.href));
+  }, [filteredNavItems, filteredBottomNav]);
 
   const navItems = filteredNavItems;
   const bottomNavItems = filteredBottomNav;
@@ -306,6 +321,55 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </Link>
             );
           })}
+          
+          {/* More Menu Button */}
+          {moreMenuItems.length > 0 && (
+            <Sheet open={moreMenuOpen} onOpenChange={setMoreMenuOpen}>
+              <SheetTrigger asChild>
+                <button
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all duration-300 min-w-[60px]",
+                    moreMenuOpen ? "text-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  <div className={cn(
+                    "p-2 rounded-xl transition-all duration-300",
+                    moreMenuOpen ? "bg-primary/10" : ""
+                  )}>
+                    <Menu className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-medium">More</span>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-auto max-h-[70vh] rounded-t-3xl">
+                <SheetHeader className="pb-4">
+                  <SheetTitle>More Options</SheetTitle>
+                </SheetHeader>
+                <div className="grid grid-cols-4 gap-4 pb-6">
+                  {moreMenuItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.href;
+                    return (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        onClick={() => setMoreMenuOpen(false)}
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all duration-300",
+                          isActive 
+                            ? "bg-primary text-primary-foreground" 
+                            : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="w-6 h-6" />
+                        <span className="text-xs font-medium text-center">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
         </div>
       </nav>
 
