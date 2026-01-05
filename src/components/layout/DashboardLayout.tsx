@@ -1,4 +1,5 @@
-import { ReactNode, useState, useEffect, useMemo } from 'react';
+import { ReactNode, useState, useEffect, useMemo, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useManager } from '@/contexts/ManagerContext';
@@ -12,6 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { 
   Building2, 
   LayoutDashboard, 
@@ -100,6 +102,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { isOwner, isManager, hasPermission, managerData } = useManager();
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [isDark, setIsDark] = useState(() => {
@@ -169,6 +172,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const bottomHrefs = new Set(filteredBottomNav.map(item => item.href));
     return filteredNavItems.filter(item => !bottomHrefs.has(item.href));
   }, [filteredNavItems, filteredBottomNav]);
+
+  // Pull to refresh handler
+  const handleRefresh = useCallback(async () => {
+    // Invalidate all queries to refetch data
+    await queryClient.invalidateQueries();
+  }, [queryClient]);
 
   const navItems = filteredNavItems;
   const bottomNavItems = filteredBottomNav;
@@ -375,9 +384,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main Content */}
       <main className="lg:ml-72 pt-16 lg:pt-0 pb-24 lg:pb-0 min-h-screen">
-        <div className="p-4 lg:p-8 max-w-7xl">
-          {children}
-        </div>
+        <PullToRefresh onRefresh={handleRefresh} className="h-full">
+          <div className="p-4 lg:p-8 max-w-7xl">
+            {children}
+          </div>
+        </PullToRefresh>
       </main>
 
       {/* Logout Confirmation Dialog */}
