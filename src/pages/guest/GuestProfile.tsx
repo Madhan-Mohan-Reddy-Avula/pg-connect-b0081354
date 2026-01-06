@@ -12,6 +12,10 @@ import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { User, Phone, Mail, FileText, Upload, Eye, AlertCircle, Download, Trash2, BookOpen } from 'lucide-react';
 import { generateUserManual } from '@/utils/generateUserManual';
+import { saveFileToDevice, SaveAction } from '@/utils/saveFileMobile';
+import { SaveShareDialog } from '@/components/ui/save-share-dialog';
+import { DownloadHistory } from '@/components/guest/DownloadHistory';
+import { Capacitor } from '@capacitor/core';
 
 interface Document {
   id: string;
@@ -28,6 +32,8 @@ export default function GuestProfile() {
   const [uploading, setUploading] = useState(false);
   const [deleteDocConfirmOpen, setDeleteDocConfirmOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState<Document | null>(null);
+  const [saveShareDialogOpen, setSaveShareDialogOpen] = useState(false);
+  const [pendingDownload, setPendingDownload] = useState<{ blob: Blob; fileName: string; docType: string } | null>(null);
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
@@ -153,7 +159,7 @@ export default function GuestProfile() {
     window.open(data.signedUrl, '_blank');
   };
 
-  // Download document
+  // Download document - handles both web and mobile
   const handleDownloadDocument = async (documentUrl: string, docType: string) => {
     const filePath = getFilePath(documentUrl);
     const { data, error } = await supabase.storage
@@ -165,14 +171,26 @@ export default function GuestProfile() {
       return;
     }
     
-    const url = URL.createObjectURL(data);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${docType}.${filePath.split('.').pop()}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const fileExt = filePath.split('.').pop() || 'pdf';
+    const fileName = `${docType.replace(/\s+/g, '_')}.${fileExt}`;
+    
+    // On native platforms, show save/share dialog
+    if (Capacitor.isNativePlatform()) {
+      setPendingDownload({ blob: data, fileName, docType });
+      setSaveShareDialogOpen(true);
+    } else {
+      // Web: direct download
+      await saveFileToDevice(data, fileName, 'save', docType);
+    }
+  };
+
+  // Handle save action from dialog
+  const handleSaveAction = async (action: SaveAction) => {
+    if (pendingDownload) {
+      await saveFileToDevice(pendingDownload.blob, pendingDownload.fileName, action, pendingDownload.docType);
+      setPendingDownload(null);
+    }
+    setSaveShareDialogOpen(false);
   };
 
   // Delete document
@@ -502,6 +520,9 @@ export default function GuestProfile() {
             )}
           </CardContent>
         </Card>
+
+        {/* Download History */}
+        <DownloadHistory />
       </div>
 
       {/* Delete Document Confirmation */}
@@ -514,6 +535,15 @@ export default function GuestProfile() {
         cancelText="Cancel"
         onConfirm={confirmDeleteDoc}
         variant="destructive"
+      />
+
+      {/* Save/Share Dialog for Mobile */}
+      <SaveShareDialog
+        open={saveShareDialogOpen}
+        onOpenChange={setSaveShareDialogOpen}
+        fileName={pendingDownload?.fileName || ''}
+        onSave={() => handleSaveAction('save')}
+        onShare={() => handleSaveAction('share')}
       />
     </DashboardLayout>
   );
