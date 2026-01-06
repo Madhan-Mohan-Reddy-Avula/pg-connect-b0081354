@@ -1,17 +1,20 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 interface PullToRefreshProps {
   children: React.ReactNode;
   onRefresh?: () => Promise<void> | void;
   className?: string;
+  showSuccessToast?: boolean;
 }
 
 export const PullToRefresh: React.FC<PullToRefreshProps> = ({
   children,
   onRefresh,
   className,
+  showSuccessToast = true,
 }) => {
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -77,8 +80,21 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
           // Default behavior: reload the page
           window.location.reload();
         }
+        
+        // Show success toast
+        if (showSuccessToast) {
+          toast({
+            title: "Data refreshed",
+            description: "Your data has been updated successfully.",
+          });
+        }
       } catch (error) {
         console.error('Refresh failed:', error);
+        toast({
+          title: "Refresh failed",
+          description: "Could not refresh data. Please try again.",
+          variant: "destructive",
+        });
       } finally {
         setIsRefreshing(false);
         setPullDistance(0);
