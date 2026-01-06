@@ -30,74 +30,64 @@ export function usePushNotifications() {
     const initPushNotifications = async () => {
       if (!user) return;
 
-      const isNative = Capacitor.isNativePlatform();
-      
-      if (isNative) {
-        // For native apps, we'll use Capacitor Push Notifications
-        try {
-          const { PushNotifications } = await import('@capacitor/push-notifications');
-          
-          // Check permission status
-          const permStatus = await PushNotifications.checkPermissions();
-          
-          if (permStatus.receive === 'prompt') {
-            const result = await PushNotifications.requestPermissions();
-            if (result.receive !== 'granted') {
-              console.log('Push notification permission denied');
-              return;
+      try {
+        const isNative = Capacitor.isNativePlatform();
+        
+        if (isNative) {
+          // For native apps, we'll use Capacitor Push Notifications
+          // Wrap in try-catch to prevent app crash if not properly configured
+          try {
+            const { PushNotifications } = await import('@capacitor/push-notifications');
+            
+            // Only set as supported, don't auto-request permissions
+            // Let user manually enable via button to prevent crashes
+            setIsSupported(true);
+
+            // Listen for registration
+            PushNotifications.addListener('registration', async (token: PushNotificationToken) => {
+              console.log('Push registration success, token:', token.value);
+              setToken(token.value);
+              
+              // Save token to database
+              await saveToken(token.value, Capacitor.getPlatform());
+            });
+
+            // Listen for registration errors
+            PushNotifications.addListener('registrationError', (error: unknown) => {
+              console.error('Push registration error:', error);
+            });
+
+            // Listen for push notifications received
+            PushNotifications.addListener('pushNotificationReceived', (notification: { title?: string; body?: string }) => {
+              console.log('Push notification received:', notification);
+              toast({
+                title: notification.title || 'Notification',
+                description: notification.body || '',
+              });
+            });
+
+            // Listen for push notification action performed
+            PushNotifications.addListener('pushNotificationActionPerformed', (action: unknown) => {
+              console.log('Push notification action performed:', action);
+            });
+          } catch (error) {
+            console.log('Push notifications not available on this device:', error);
+            setIsSupported(false);
+          }
+        } else {
+          // For web, check if browser supports notifications
+          if ('Notification' in window && 'serviceWorker' in navigator) {
+            setIsSupported(true);
+            
+            if (Notification.permission === 'granted') {
+              // Get FCM token if firebase is configured
+              await getWebToken();
             }
           }
-
-          if (permStatus.receive === 'denied') {
-            console.log('Push notification permission denied');
-            return;
-          }
-
-          setIsSupported(true);
-
-          // Register for push notifications
-          await PushNotifications.register();
-
-          // Listen for registration
-          PushNotifications.addListener('registration', async (token: PushNotificationToken) => {
-            console.log('Push registration success, token:', token.value);
-            setToken(token.value);
-            
-            // Save token to database
-            await saveToken(token.value, 'android');
-          });
-
-          // Listen for registration errors
-          PushNotifications.addListener('registrationError', (error: unknown) => {
-            console.error('Push registration error:', error);
-          });
-
-          // Listen for push notifications received
-          PushNotifications.addListener('pushNotificationReceived', (notification: { title?: string; body?: string }) => {
-            console.log('Push notification received:', notification);
-            toast({
-              title: notification.title || 'Notification',
-              description: notification.body || '',
-            });
-          });
-
-          // Listen for push notification action performed
-          PushNotifications.addListener('pushNotificationActionPerformed', (action: unknown) => {
-            console.log('Push notification action performed:', action);
-          });
-        } catch (error) {
-          console.log('Push notifications not available:', error);
         }
-      } else {
-        // For web, check if browser supports notifications
-        if ('Notification' in window && 'serviceWorker' in navigator) {
-          setIsSupported(true);
-          
-          if (Notification.permission === 'granted') {
-            // Get FCM token if firebase is configured
-            await getWebToken();
-          }
-        }
+      } catch (error) {
+        console.log('Error initializing push notifications:', error);
+        setIsSupported(false);
       }
     };
 
