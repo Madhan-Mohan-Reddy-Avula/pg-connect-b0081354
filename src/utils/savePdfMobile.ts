@@ -2,13 +2,14 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import jsPDF from 'jspdf';
 import { toast } from '@/hooks/use-toast';
+import { addToDownloadHistory } from '@/utils/saveFileMobile';
 
 /**
  * Saves a PDF file - handles both web and mobile (Capacitor) environments
  * On web: Uses standard browser download
  * On mobile: Saves to device Downloads folder and shows confirmation
  */
-export const savePdfToDevice = async (doc: jsPDF, fileName: string): Promise<void> => {
+export const savePdfToDevice = async (doc: jsPDF, fileName: string, fileType: string = 'PDF'): Promise<void> => {
   if (Capacitor.isNativePlatform()) {
     try {
       // Get PDF as base64
@@ -35,6 +36,9 @@ export const savePdfToDevice = async (doc: jsPDF, fileName: string): Promise<voi
         });
         console.log('PDF saved to Documents:', result.uri);
       }
+      
+      // Add to download history
+      addToDownloadHistory({ fileName, fileType, filePath: result.uri });
       
       // Show success toast with file location
       toast({
@@ -66,6 +70,10 @@ export const savePdfToDevice = async (doc: jsPDF, fileName: string): Promise<voi
   } else {
     // Standard web download
     doc.save(fileName);
+    
+    // Add to download history
+    addToDownloadHistory({ fileName, fileType });
+    
     toast({
       title: "PDF Downloaded",
       description: `${fileName} has been downloaded.`,
