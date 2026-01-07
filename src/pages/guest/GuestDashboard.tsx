@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -14,10 +15,13 @@ import { Announcements } from '@/components/guest/Announcements';
 import { RentDueAlert } from '@/components/guest/RentDueAlert';
 import { OnboardingTutorial } from '@/components/onboarding/OnboardingTutorial';
 import { useOnboarding } from '@/hooks/useOnboarding';
+import { GuestOnboardingForm } from '@/components/guest/GuestOnboardingForm';
 
 export default function GuestDashboard() {
   const { user } = useAuth();
   const { showOnboarding, completeOnboarding } = useOnboarding('guest', user?.id);
+  const [showGuestOnboarding, setShowGuestOnboarding] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: guest, isLoading: guestLoading } = useQuery({
     queryKey: ['guest-details', user?.id],
@@ -74,6 +78,18 @@ export default function GuestDashboard() {
   }
 
   if (!guest) {
+    // Show onboarding form for new guests without PG assignment
+    if (showGuestOnboarding) {
+      return (
+        <GuestOnboardingForm 
+          onComplete={() => {
+            setShowGuestOnboarding(false);
+            queryClient.invalidateQueries({ queryKey: ['guest-details'] });
+          }} 
+        />
+      );
+    }
+
     return (
       <DashboardLayout>
         <div className="text-center py-16">
@@ -81,7 +97,13 @@ export default function GuestDashboard() {
             <Building2 className="w-10 h-10 text-muted-foreground" />
           </div>
           <h2 className="text-xl font-semibold text-foreground mb-2">No PG Assigned</h2>
-          <p className="text-muted-foreground">Please contact your PG owner</p>
+          <p className="text-muted-foreground mb-6">Please contact your PG owner to get assigned a room</p>
+          <Button 
+            onClick={() => setShowGuestOnboarding(true)}
+            className="btn-gradient text-primary-foreground"
+          >
+            Complete Your Profile
+          </Button>
         </div>
       </DashboardLayout>
     );
