@@ -2,12 +2,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { BedDouble, Users, Calendar, ArrowRight, History, LogOut } from 'lucide-react';
+import { BedDouble, Users, Calendar, ArrowRight, History, LogOut, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
@@ -62,6 +64,9 @@ export function RoomDetailDialog({ room, open, onOpenChange }: RoomDetailDialogP
   const queryClient = useQueryClient();
   const [vacateConfirmOpen, setVacateConfirmOpen] = useState(false);
   const [selectedGuestForVacate, setSelectedGuestForVacate] = useState<GuestInfo | null>(null);
+  const [rejoinDialogOpen, setRejoinDialogOpen] = useState(false);
+  const [selectedGuestForRejoin, setSelectedGuestForRejoin] = useState<BedHistoryEntry | null>(null);
+  const [rejoinBedId, setRejoinBedId] = useState('');
 
   // Vacate mutation
   const vacateMutation = useMutation({
@@ -107,6 +112,55 @@ export function RoomDetailDialog({ room, open, onOpenChange }: RoomDetailDialogP
     },
   });
 
+  // Rejoin mutation
+  const rejoinMutation = useMutation({
+    mutationFn: async ({ guestId, bedId }: { guestId: string; bedId: string }) => {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Update guest status to active and assign new bed
+      const { error } = await supabase
+        .from('guests')
+        .update({
+          status: 'active',
+          vacate_date: null,
+          bed_id: bedId,
+          check_in_date: today,
+        })
+        .eq('id', guestId);
+
+      if (error) throw error;
+
+      // Mark bed as occupied
+      await supabase.from('beds').update({ is_occupied: true }).eq('id', bedId);
+      
+      // Get pg_id from room
+      const pgId = room?.pg_id;
+      if (pgId) {
+        // Add new bed history entry
+        await supabase.from('bed_history').insert({
+          bed_id: bedId,
+          guest_id: guestId,
+          pg_id: pgId,
+          assigned_date: today,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['room-current-guests'] });
+      queryClient.invalidateQueries({ queryKey: ['room-bed-history'] });
+      queryClient.invalidateQueries({ queryKey: ['guests'] });
+      queryClient.invalidateQueries({ queryKey: ['all-beds'] });
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      toast({ title: 'Guest rejoined', description: 'Guest has been reactivated and assigned to a bed' });
+      setRejoinDialogOpen(false);
+      setSelectedGuestForRejoin(null);
+      setRejoinBedId('');
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const handleVacateClick = (guest: GuestInfo) => {
     setSelectedGuestForVacate(guest);
     setVacateConfirmOpen(true);
@@ -116,6 +170,23 @@ export function RoomDetailDialog({ room, open, onOpenChange }: RoomDetailDialogP
     if (selectedGuestForVacate) {
       vacateMutation.mutate(selectedGuestForVacate);
     }
+  };
+
+  const handleRejoinClick = (entry: BedHistoryEntry) => {
+    setSelectedGuestForRejoin(entry);
+    setRejoinBedId('');
+    setRejoinDialogOpen(true);
+  };
+
+  const confirmRejoin = () => {
+    if (selectedGuestForRejoin && rejoinBedId) {
+      rejoinMutation.mutate({ guestId: selectedGuestForRejoin.guest.id, bedId: rejoinBedId });
+    }
+  };
+
+  const getAvailableBeds = () => {
+    if (!room?.beds) return [];
+    return room.beds.filter(bed => !bed.is_occupied);
   };
 
   // Fetch current guests in this room
@@ -308,6 +379,17 @@ export function RoomDetailDialog({ room, open, onOpenChange }: RoomDetailDialogP
                             }
                           </span>
                         </div>
+                        {entry.guest?.status === 'vacated' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full mt-2 text-green-600 border-green-600/30 hover:bg-green-500/10"
+                            onClick={() => handleRejoinClick(entry)}
+                          >
+                            <UserPlus className="w-4 h-4 mr-1" />
+                            Rejoin Guest
+                          </Button>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
@@ -329,6 +411,66 @@ export function RoomDetailDialog({ room, open, onOpenChange }: RoomDetailDialogP
         onConfirm={confirmVacate}
         variant="destructive"
       />
+
+      {/* Rejoin Guest Dialog */}
+      <Dialog open={rejoinDialogOpen} onOpenChange={setRejoinDialogOpen}>
+        <DialogContent className="max-w-md bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-green-600" />
+              Rejoin Guest
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Rejoin <span className="font-medium text-foreground">{selectedGuestForRejoin?.guest?.full_name}</span> by assigning a bed.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="rejoin-bed-room">Select Bed <span className="text-destructive">*</span></Label>
+              <Select
+                value={rejoinBedId}
+                onValueChange={setRejoinBedId}
+              >
+                <SelectTrigger className="bg-secondary/50 border-border">
+                  <SelectValue placeholder="Select an available bed" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {getAvailableBeds().length === 0 ? (
+                    <SelectItem value="none" disabled>No available beds in this room</SelectItem>
+                  ) : (
+                    getAvailableBeds().map((bed) => (
+                      <SelectItem key={bed.id} value={bed.id}>
+                        {bed.bed_number}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {getAvailableBeds().length === 0 && (
+                <p className="text-xs text-amber-600">All beds in this room are occupied. Please vacate a bed first or use Guest Management to assign a different room.</p>
+              )}
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="flex-1" 
+                onClick={() => setRejoinDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="button" 
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white" 
+                onClick={confirmRejoin}
+                disabled={!rejoinBedId || rejoinMutation.isPending}
+              >
+                {rejoinMutation.isPending ? 'Rejoining...' : 'Rejoin Guest'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
