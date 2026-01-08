@@ -12,6 +12,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { useToast } from '@/hooks/use-toast';
 import { Building2, Loader2, Home, Users, Sparkles, Key } from 'lucide-react';
 import { z } from 'zod';
+import { TwoFactorVerify } from '@/components/security/TwoFactorVerify';
 
 const authSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -27,6 +28,10 @@ export default function Auth() {
   const [role, setRole] = useState<'owner' | 'guest'>('guest');
   const [inviteCode, setInviteCode] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // 2FA state
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   
   const { signUp, signIn } = useAuth();
   const { toast } = useToast();
@@ -146,9 +151,9 @@ export default function Auth() {
 
     setIsLoading(true);
     const { error } = await signIn(email, password);
-    setIsLoading(false);
 
     if (error) {
+      setIsLoading(false);
       toast({
         title: 'Sign in failed',
         description: error.message === 'Invalid login credentials'
@@ -159,11 +164,84 @@ export default function Auth() {
       return;
     }
 
+    // Check if 2FA is enabled for this user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-2fa-status`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id }),
+          }
+        );
+        
+        const result = await response.json();
+        
+        if (result.twoFactorEnabled) {
+          // Sign out temporarily and show 2FA prompt
+          await supabase.auth.signOut();
+          setPendingUserId(user.id);
+          setRequires2FA(true);
+          setIsLoading(false);
+          return;
+        }
+      } catch (err) {
+        // If 2FA check fails, proceed with login
+        console.log('2FA check failed, proceeding with login');
+      }
+    }
+
+    setIsLoading(false);
     toast({
       title: 'Welcome back!',
       description: 'Signed in successfully.',
     });
   };
+
+  const handle2FASuccess = async () => {
+    // Re-authenticate the user
+    setIsLoading(true);
+    const { error } = await signIn(email, password);
+    setIsLoading(false);
+    
+    if (error) {
+      toast({
+        title: 'Sign in failed',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
+      setRequires2FA(false);
+      setPendingUserId(null);
+      return;
+    }
+    
+    toast({
+      title: 'Welcome back!',
+      description: 'Signed in successfully.',
+    });
+    
+    setRequires2FA(false);
+    setPendingUserId(null);
+  };
+
+  const handle2FACancel = () => {
+    setRequires2FA(false);
+    setPendingUserId(null);
+    setPassword('');
+  };
+
+  // Show 2FA verification screen
+  if (requires2FA && pendingUserId) {
+    return (
+      <TwoFactorVerify
+        userId={pendingUserId}
+        onSuccess={handle2FASuccess}
+        onCancel={handle2FACancel}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
