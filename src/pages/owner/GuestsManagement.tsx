@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, User, Edit2, Trash2, Users, BedDouble, Phone, Mail, History, Clock, FileText, Download, Eye, CheckCircle2, AlertCircle, Search, Filter, ArrowUpDown, UserPlus } from 'lucide-react';
+import { Plus, User, Edit2, Trash2, Users, BedDouble, Phone, Mail, History, Clock, FileText, Download, Eye, CheckCircle2, AlertCircle, Search, Filter, ArrowUpDown, UserPlus, Copy, Key } from 'lucide-react';
 import { format } from 'date-fns';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 
@@ -34,6 +34,8 @@ interface Guest {
   status: string;
   check_in_date: string | null;
   emergency_contact: string | null;
+  invite_code: string | null;
+  user_id: string | null;
 }
 
 interface Bed {
@@ -219,6 +221,10 @@ export default function GuestsManagement() {
 
   const addGuestMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      // Generate invite code using the database function
+      const { data: inviteCode, error: codeError } = await supabase.rpc('generate_invite_code');
+      if (codeError) throw codeError;
+
       const payload = {
         pg_id: pg!.id,
         // user_id is optional until the guest creates an account
@@ -230,6 +236,7 @@ export default function GuestsManagement() {
         emergency_contact: data.emergency_contact || null,
         check_in_date: new Date().toISOString().split('T')[0],
         status: 'active',
+        invite_code: inviteCode,
       } as any;
 
       const { data: guest, error } = await supabase
@@ -264,13 +271,17 @@ export default function GuestsManagement() {
 
       return guest;
     },
-    onSuccess: () => {
+    onSuccess: (guest) => {
       queryClient.invalidateQueries({ queryKey: ['guests'] });
       queryClient.invalidateQueries({ queryKey: ['all-beds'] });
       queryClient.invalidateQueries({ queryKey: ['bed-history'] });
       setIsDialogOpen(false);
       resetForm();
-      toast({ title: 'Guest added', description: 'Guest has been added successfully' });
+      toast({ 
+        title: 'Guest added', 
+        description: `Invite code: ${guest.invite_code}. Share this with the guest to sign up.`,
+        duration: 10000,
+      });
     },
     onError: (error: Error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -842,10 +853,29 @@ export default function GuestsManagement() {
                       </div>
                       <div>
                         <CardTitle className="text-base">{guest.full_name}</CardTitle>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
                           <Badge variant={guest.status === 'active' ? 'default' : 'secondary'}>
                             {guest.status}
                           </Badge>
+                          {guest.user_id ? (
+                            <Badge variant="outline" className="text-blue-600 border-blue-600/50 bg-blue-500/10">
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              Registered
+                            </Badge>
+                          ) : guest.invite_code ? (
+                            <Badge 
+                              variant="outline" 
+                              className="text-purple-600 border-purple-600/50 bg-purple-500/10 cursor-pointer hover:bg-purple-500/20"
+                              onClick={() => {
+                                navigator.clipboard.writeText(guest.invite_code!);
+                                toast({ title: 'Copied!', description: `Invite code ${guest.invite_code} copied to clipboard` });
+                              }}
+                            >
+                              <Key className="w-3 h-3 mr-1" />
+                              {guest.invite_code}
+                              <Copy className="w-3 h-3 ml-1" />
+                            </Badge>
+                          ) : null}
                           {guestDocumentCounts && guestDocumentCounts[guest.id] > 0 ? (
                             <Badge variant="outline" className="text-green-600 border-green-600/50 bg-green-500/10">
                               <CheckCircle2 className="w-3 h-3 mr-1" />

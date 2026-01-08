@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Loader2, Home, Users, Sparkles } from 'lucide-react';
+import { Building2, Loader2, Home, Users, Sparkles, Key } from 'lucide-react';
 import { z } from 'zod';
 
 const authSchema = z.object({
@@ -23,6 +25,7 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<'owner' | 'guest'>('guest');
+  const [inviteCode, setInviteCode] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   const { signUp, signIn } = useAuth();
@@ -33,6 +36,11 @@ export default function Auth() {
     try {
       if (isSignUp) {
         authSchema.parse({ email, password, fullName });
+        // For guests, validate invite code
+        if (role === 'guest' && inviteCode.length !== 6) {
+          setErrors({ inviteCode: 'Please enter the 6-digit invite code from your PG owner' });
+          return false;
+        }
       } else {
         authSchema.omit({ fullName: true }).parse({ email, password });
       }
@@ -57,10 +65,41 @@ export default function Auth() {
     if (!validateForm(true)) return;
 
     setIsLoading(true);
+    
+    // For guests, verify the invite code exists before signup
+    if (role === 'guest') {
+      const { data: guestRecord, error: checkError } = await supabase
+        .from('guests')
+        .select('id, user_id')
+        .eq('invite_code', inviteCode)
+        .eq('status', 'active')
+        .maybeSingle();
+      
+      if (checkError || !guestRecord) {
+        setIsLoading(false);
+        toast({
+          title: 'Invalid invite code',
+          description: 'The invite code is invalid or has already been used. Please contact your PG owner.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      if (guestRecord.user_id) {
+        setIsLoading(false);
+        toast({
+          title: 'Code already used',
+          description: 'This invite code has already been claimed. Please sign in instead.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     const { error } = await signUp(email, password, fullName, role);
-    setIsLoading(false);
 
     if (error) {
+      setIsLoading(false);
       toast({
         title: 'Sign up failed',
         description: error.message === 'User already registered' 
@@ -71,6 +110,28 @@ export default function Auth() {
       return;
     }
 
+    // For guests, claim the account using the invite code
+    if (role === 'guest') {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: guestId, error: claimError } = await supabase.rpc('claim_guest_account', {
+          p_invite_code: inviteCode,
+          p_user_id: user.id
+        });
+        
+        if (claimError || !guestId) {
+          setIsLoading(false);
+          toast({
+            title: 'Failed to link account',
+            description: 'Your account was created but could not be linked. Please contact your PG owner.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+    }
+
+    setIsLoading(false);
     toast({
       title: 'Account created!',
       description: 'Welcome to PG Manager.',
@@ -265,6 +326,34 @@ export default function Auth() {
                       </div>
                     </RadioGroup>
                   </div>
+
+                  {role === 'guest' && (
+                    <div className="space-y-3">
+                      <Label className="text-foreground flex items-center gap-2">
+                        <Key className="w-4 h-4" />
+                        Invite Code
+                      </Label>
+                      <p className="text-xs text-muted-foreground">Enter the 6-digit code provided by your PG owner</p>
+                      <InputOTP
+                        maxLength={6}
+                        value={inviteCode}
+                        onChange={(value) => setInviteCode(value)}
+                        disabled={isLoading}
+                      >
+                        <InputOTPGroup className="gap-2 justify-center w-full">
+                          <InputOTPSlot index={0} className="w-10 h-12 bg-secondary/50 border-border/50 rounded-lg" />
+                          <InputOTPSlot index={1} className="w-10 h-12 bg-secondary/50 border-border/50 rounded-lg" />
+                          <InputOTPSlot index={2} className="w-10 h-12 bg-secondary/50 border-border/50 rounded-lg" />
+                          <InputOTPSlot index={3} className="w-10 h-12 bg-secondary/50 border-border/50 rounded-lg" />
+                          <InputOTPSlot index={4} className="w-10 h-12 bg-secondary/50 border-border/50 rounded-lg" />
+                          <InputOTPSlot index={5} className="w-10 h-12 bg-secondary/50 border-border/50 rounded-lg" />
+                        </InputOTPGroup>
+                      </InputOTP>
+                      {errors.inviteCode && (
+                        <p className="text-sm text-destructive">{errors.inviteCode}</p>
+                      )}
+                    </div>
+                  )}
 
                   <Button 
                     type="submit" 

@@ -270,6 +270,7 @@ export type Database = {
           emergency_contact: string | null
           full_name: string
           id: string
+          invite_code: string | null
           monthly_rent: number
           pg_id: string
           phone: string
@@ -286,6 +287,7 @@ export type Database = {
           emergency_contact?: string | null
           full_name: string
           id?: string
+          invite_code?: string | null
           monthly_rent?: number
           pg_id: string
           phone: string
@@ -302,6 +304,7 @@ export type Database = {
           emergency_contact?: string | null
           full_name?: string
           id?: string
+          invite_code?: string | null
           monthly_rent?: number
           pg_id?: string
           phone?: string
@@ -795,6 +798,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_guest_account: {
+        Args: { p_invite_code: string; p_user_id: string }
+        Returns: string
+      }
+      generate_invite_code: { Args: never; Returns: string }
       get_guest_pg_id: { Args: { _user_id: string }; Returns: string }
       get_manager_permission: {
         Args: { _permission: string; _pg_id: string; _user_id: string }
