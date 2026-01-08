@@ -164,7 +164,7 @@ export default function OwnerProfile() {
             <CardContent className="flex flex-col items-center gap-4">
               <AvatarUpload
                 bucket="pg-images"
-                folder={`avatars/${pg.id}`}
+                folder={`${user?.id}/avatars`}
                 value={pg.avatar_url}
                 onChange={handleAvatarChange}
                 fallback={pg.name}
