@@ -191,22 +191,34 @@ export default function Auth() {
         // If 2FA check fails, proceed with login
         console.log('2FA check failed, proceeding with login');
       }
+
+      // Get user role and navigate to appropriate dashboard
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      setIsLoading(false);
+      toast({
+        title: 'Welcome back!',
+        description: 'Signed in successfully.',
+      });
+      
+      navigate(roleData?.role === 'owner' ? '/owner' : '/guest');
+      return;
     }
 
     setIsLoading(false);
-    toast({
-      title: 'Welcome back!',
-      description: 'Signed in successfully.',
-    });
   };
 
   const handle2FASuccess = async () => {
     // Re-authenticate the user
     setIsLoading(true);
     const { error } = await signIn(email, password);
-    setIsLoading(false);
     
     if (error) {
+      setIsLoading(false);
       toast({
         title: 'Sign in failed',
         description: 'Please try again.',
@@ -217,11 +229,28 @@ export default function Auth() {
       return;
     }
     
-    toast({
-      title: 'Welcome back!',
-      description: 'Signed in successfully.',
-    });
+    // Get user role and navigate
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      setIsLoading(false);
+      toast({
+        title: 'Welcome back!',
+        description: 'Signed in successfully.',
+      });
+      
+      setRequires2FA(false);
+      setPendingUserId(null);
+      navigate(roleData?.role === 'owner' ? '/owner' : '/guest');
+      return;
+    }
     
+    setIsLoading(false);
     setRequires2FA(false);
     setPendingUserId(null);
   };
