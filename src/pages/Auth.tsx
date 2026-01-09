@@ -169,7 +169,7 @@ export default function Auth() {
     if (user) {
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-2fa-status`,
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-totp-status`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

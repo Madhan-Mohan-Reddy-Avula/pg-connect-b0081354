@@ -50,7 +50,7 @@ export function SecuritySettings({ className }: SecuritySettingsProps) {
       if (!session) throw new Error('Not authenticated');
       
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/2fa-setup`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/totp-setup`,
         {
           method: 'POST',
           headers: {
@@ -84,7 +84,7 @@ export function SecuritySettings({ className }: SecuritySettingsProps) {
       if (!session) throw new Error('Not authenticated');
       
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/2fa-verify`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/totp-verify`,
         {
           method: 'POST',
           headers: {
