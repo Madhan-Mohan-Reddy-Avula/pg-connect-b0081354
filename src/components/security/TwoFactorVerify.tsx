@@ -23,7 +23,7 @@ export function TwoFactorVerify({ userId, onSuccess, onCancel }: TwoFactorVerify
     setVerifying(true);
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/login-verify-otp`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-login-otp`,
         {
           method: 'POST',
           headers: {

@@ -57,15 +57,6 @@ serve(async (req) => {
   }
 
   try {
-    const { otp, action } = await req.json();
-
-    if (!otp || otp.length !== 6) {
-      return new Response(
-        JSON.stringify({ error: "Invalid OTP format" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
@@ -74,6 +65,7 @@ serve(async (req) => {
       }
     );
 
+    // Get authenticated user
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
       return new Response(
@@ -82,9 +74,19 @@ serve(async (req) => {
       );
     }
 
+    const { otp, action } = await req.json();
+
+    if (!otp || otp.length !== 6 || !["enable", "disable"].includes(action)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid request" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get user's 2FA secret
     const { data: profile, error: profileError } = await supabaseClient
       .from("profiles")
-      .select("two_factor_enabled, two_factor_secret")
+      .select("two_factor_secret")
       .eq("user_id", user.id)
       .single();
 
@@ -95,7 +97,7 @@ serve(async (req) => {
       );
     }
 
-    // Verify the OTP
+    // Verify OTP
     const isValid = await verifyTOTP(profile.two_factor_secret, otp);
 
     if (!isValid) {
@@ -105,7 +107,7 @@ serve(async (req) => {
       );
     }
 
-    // If action is 'enable', enable 2FA
+    // Update 2FA status
     if (action === "enable") {
       const { error: updateError } = await supabaseClient
         .from("profiles")
@@ -118,10 +120,7 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-    }
-
-    // If action is 'disable', disable 2FA and clear secret
-    if (action === "disable") {
+    } else if (action === "disable") {
       const { error: updateError } = await supabaseClient
         .from("profiles")
         .update({ two_factor_enabled: false, two_factor_secret: null })
@@ -136,7 +135,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, verified: true }),
+      JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
