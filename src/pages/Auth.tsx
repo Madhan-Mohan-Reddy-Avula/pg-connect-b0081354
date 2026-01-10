@@ -168,28 +168,21 @@ export default function Auth() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-totp-status`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.id }),
-          }
+        const { data: result, error: fnError } = await supabase.functions.invoke(
+          'check-totp-status',
+          { body: { userId: user.id } }
         );
-        
-        const result = await response.json();
-        
-        if (result.twoFactorEnabled) {
-          // Sign out temporarily and show 2FA prompt
-          await supabase.auth.signOut();
+
+        if (!fnError && result?.twoFactorEnabled) {
+          // Sign out locally (do not revoke tokens) and show 2FA prompt
+          await supabase.auth.signOut({ scope: 'local' });
           setPendingUserId(user.id);
           setRequires2FA(true);
           setIsLoading(false);
           return;
         }
-      } catch (err) {
+      } catch {
         // If 2FA check fails, proceed with login
-        console.log('2FA check failed, proceeding with login');
       }
 
       // Get user role and navigate to appropriate dashboard
