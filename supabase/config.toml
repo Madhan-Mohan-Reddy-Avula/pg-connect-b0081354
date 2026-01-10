@@ -1,1 +1,7 @@
 project_id = "fqkhzclbqdqtwmktqsfo"
+
+[functions.check-totp-status]
+verify_jwt = false
+
+[functions.verify-login-otp]
+verify_jwt = false
