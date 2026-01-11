@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Receipt, Check, Clock, IndianRupee, Calendar, User, Download, AlertTriangle, Filter, Search, ArrowUpDown } from 'lucide-react';
+import { Plus, Receipt, Check, Clock, IndianRupee, Calendar, User, Download, AlertTriangle, Filter, Search, ArrowUpDown, ExternalLink } from 'lucide-react';
 import { generateRentReceipt } from '@/utils/generateRentReceipt';
 import { format, differenceInDays, isPast, isToday } from 'date-fns';
+import { Link } from 'react-router-dom';
 
 type RentStatusFilter = 'all' | 'paid' | 'pending' | 'overdue';
 
@@ -88,6 +89,22 @@ export default function RentTracking() {
         .order('month', { ascending: false });
       if (error) throw error;
       return data as Rent[];
+    },
+    enabled: !!pg?.id,
+  });
+
+  // Fetch pending payments for approval
+  const { data: pendingPayments } = useQuery({
+    queryKey: ['pending-payments', pg?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('manual_payments')
+        .select('*, guest:guests(full_name, phone)')
+        .eq('pg_id', pg!.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
     },
     enabled: !!pg?.id,
   });
@@ -227,6 +244,53 @@ export default function RentTracking() {
         <div className="text-center py-12">
           <p className="text-muted-foreground">Please set up your PG first</p>
         </div>
+
+        {/* Pending Payment Approvals Alert */}
+        {pendingPayments && pendingPayments.length > 0 && (
+          <Card className="premium-card border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                    <Clock className="w-6 h-6 text-amber-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">
+                      {pendingPayments.length} Payment{pendingPayments.length > 1 ? 's' : ''} Awaiting Approval
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Total: ₹{pendingPayments.reduce((sum, p) => sum + Number(p.amount), 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <Link to="/owner/payments">
+                  <Button className="bg-foreground text-background hover:bg-foreground/90 gap-2">
+                    <ExternalLink className="w-4 h-4" />
+                    Review Payments
+                  </Button>
+                </Link>
+              </div>
+              {/* Quick preview of pending payments */}
+              <div className="mt-4 space-y-2">
+                {pendingPayments.slice(0, 3).map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between p-2 bg-secondary/50 rounded-lg text-sm">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span>{payment.guest?.full_name}</span>
+                      <Badge variant="outline" className="text-xs capitalize">{payment.payment_purpose}</Badge>
+                    </div>
+                    <span className="font-medium">₹{Number(payment.amount).toLocaleString()}</span>
+                  </div>
+                ))}
+                {pendingPayments.length > 3 && (
+                  <p className="text-xs text-muted-foreground text-center pt-1">
+                    +{pendingPayments.length - 3} more pending...
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </DashboardLayout>
     );
   }
