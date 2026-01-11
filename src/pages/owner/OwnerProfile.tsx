@@ -12,7 +12,6 @@ import { useToast } from '@/hooks/use-toast';
 import { User, Phone, Mail, Building2, Edit2, Save, X, BookOpen, Download, LogOut, Camera } from 'lucide-react';
 import { generateUserManual } from '@/utils/generateUserManual';
 import { AvatarUpload } from '@/components/ui/avatar-upload';
-import { SecuritySettings } from '@/components/security/SecuritySettings';
 
 export default function OwnerProfile() {
   const { user, signOut } = useAuth();
@@ -299,9 +298,6 @@ export default function OwnerProfile() {
             </CardContent>
           </Card>
         )}
-
-        {/* Security Settings */}
-        <SecuritySettings />
 
         {/* Logout Button */}
         <Card className="premium-card border-destructive/30">
