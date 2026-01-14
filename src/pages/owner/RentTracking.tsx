@@ -244,53 +244,6 @@ export default function RentTracking() {
         <div className="text-center py-12">
           <p className="text-muted-foreground">Please set up your PG first</p>
         </div>
-
-        {/* Pending Payment Approvals Alert */}
-        {pendingPayments && pendingPayments.length > 0 && (
-          <Card className="premium-card border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent">
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-amber-500" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">
-                      {pendingPayments.length} Payment{pendingPayments.length > 1 ? 's' : ''} Awaiting Approval
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Total: ₹{pendingPayments.reduce((sum, p) => sum + Number(p.amount), 0).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-                <Link to="/owner/payments">
-                  <Button className="bg-foreground text-background hover:bg-foreground/90 gap-2">
-                    <ExternalLink className="w-4 h-4" />
-                    Review Payments
-                  </Button>
-                </Link>
-              </div>
-              {/* Quick preview of pending payments */}
-              <div className="mt-4 space-y-2">
-                {pendingPayments.slice(0, 3).map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between p-2 bg-secondary/50 rounded-lg text-sm">
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span>{payment.guest?.full_name}</span>
-                      <Badge variant="outline" className="text-xs capitalize">{payment.payment_purpose}</Badge>
-                    </div>
-                    <span className="font-medium">₹{Number(payment.amount).toLocaleString()}</span>
-                  </div>
-                ))}
-                {pendingPayments.length > 3 && (
-                  <p className="text-xs text-muted-foreground text-center pt-1">
-                    +{pendingPayments.length - 3} more pending...
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </DashboardLayout>
     );
   }
@@ -377,7 +330,55 @@ export default function RentTracking() {
           </Dialog>
         </div>
 
+        {/* Pending Payment Approvals */}
+        {pendingPayments && pendingPayments.length > 0 && (
+          <Card className="premium-card border-primary/30 bg-gradient-to-br from-primary/10 to-transparent">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Clock className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-foreground">
+                      {pendingPayments.length} Payment{pendingPayments.length > 1 ? "s" : ""} awaiting approval
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Total: ₹{pendingPayments.reduce((sum, p) => sum + Number(p.amount), 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <Link to="/owner/payments">
+                  <Button className="bg-foreground text-background hover:bg-foreground/90 gap-2">
+                    <ExternalLink className="w-4 h-4" />
+                    Review payments
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {pendingPayments.slice(0, 3).map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between p-2 bg-secondary/50 rounded-lg text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span className="truncate">{payment.guest?.full_name ?? "Guest"}</span>
+                      <Badge variant="outline" className="text-xs capitalize">{payment.payment_purpose}</Badge>
+                    </div>
+                    <span className="font-medium">₹{Number(payment.amount).toLocaleString()}</span>
+                  </div>
+                ))}
+                {pendingPayments.length > 3 && (
+                  <p className="text-xs text-muted-foreground text-center pt-1">
+                    +{pendingPayments.length - 3} more pending…
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Stats */}
+
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card className="premium-card">
             <CardContent className="p-5">
