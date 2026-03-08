@@ -169,7 +169,7 @@ export function GuestChatbot() {
                     <Bot className="w-4 h-4 text-foreground" />
                   </div>
                   <div className="bg-secondary/50 rounded-xl rounded-tl-sm px-3 py-2 text-sm">
-                    Hi! I'm your PG assistant. Ask me about house rules, rent, announcements, or anything else! 👋
+                    Hi! I'm your PG assistant. Ask me about house rules, rent, announcements, or raise a complaint — I'm here to help! 👋
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5 pl-9">
