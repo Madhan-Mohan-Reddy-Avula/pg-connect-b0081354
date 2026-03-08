@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Receipt, Edit2, Trash2, IndianRupee, Calendar, TrendingDown, Image as ImageIcon, ArrowUpDown } from 'lucide-react';
+import { Plus, Receipt, Edit2, Trash2, IndianRupee, Calendar, TrendingDown, Image as ImageIcon, ArrowUpDown, Sparkles, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ImageUpload } from '@/components/ui/image-upload';
 
@@ -60,6 +60,34 @@ export default function ExpensesManagement() {
     category: 'other',
     expense_month: format(new Date(), 'yyyy-MM'),
   });
+  const [aiSuggesting, setAiSuggesting] = useState(false);
+  const [aiSuggested, setAiSuggested] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const suggestCategory = useCallback(async (title: string) => {
+    if (title.trim().length < 3) return;
+    setAiSuggesting(true);
+    try {
+      const resp = await supabase.functions.invoke('categorize-expense', {
+        body: { title },
+      });
+      if (resp.data?.category && resp.data.category !== 'other') {
+        setFormData(prev => ({ ...prev, category: resp.data.category }));
+        setAiSuggested(true);
+        setTimeout(() => setAiSuggested(false), 3000);
+      }
+    } catch {
+      // silently fail - category stays as user's choice
+    } finally {
+      setAiSuggesting(false);
+    }
+  }, []);
+
+  const handleTitleChange = useCallback((newTitle: string) => {
+    setFormData(prev => ({ ...prev, title: newTitle }));
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => suggestCategory(newTitle), 600);
+  }, [suggestCategory]);
 
   // Fetch owner's PG
   const { data: pg } = useQuery({
@@ -258,14 +286,28 @@ export default function ExpensesManagement() {
                   <Input
                     id="title"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) => handleTitleChange(e.target.value)}
                     placeholder="e.g., Electricity Bill"
                     className="bg-secondary/50 border-border"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
+                  <Label htmlFor="category" className="flex items-center gap-2">
+                    Category
+                    {aiSuggesting && (
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        AI suggesting...
+                      </span>
+                    )}
+                    {aiSuggested && !aiSuggesting && (
+                      <span className="inline-flex items-center gap-1 text-xs text-primary">
+                        <Sparkles className="w-3 h-3" />
+                        AI suggested
+                      </span>
+                    )}
+                  </Label>
                   <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
                     <SelectTrigger className="bg-secondary/50 border-border">
                       <SelectValue placeholder="Select category" />
