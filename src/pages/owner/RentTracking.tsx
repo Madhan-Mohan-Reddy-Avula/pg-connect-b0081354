@@ -109,6 +109,25 @@ export default function RentTracking() {
     enabled: !!pg?.id,
   });
 
+  // Realtime subscriptions for instant updates
+  useEffect(() => {
+    if (!pg?.id) return;
+
+    const channel = supabase
+      .channel('owner-rent-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'manual_payments', filter: `pg_id=eq.${pg.id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['pending-payments', pg.id] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rents' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['rents', pg.id] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [pg?.id, queryClient]);
+
   const addRentMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const { error } = await supabase.from('rents').insert({
