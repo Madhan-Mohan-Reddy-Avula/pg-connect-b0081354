@@ -13,6 +13,7 @@ const QUICK_QUESTIONS = [
   '💰 What\'s my rent status?',
   '📢 Any announcements?',
   '📞 Owner contact info?',
+  '🚨 I want to raise a complaint',
 ];
 
 export function GuestChatbot() {
