@@ -39,6 +39,7 @@ const PaymentVerification = () => {
   const [statusFilter, setStatusFilter] = useState<PaymentStatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'name'>('date');
+  const [markRentDialog, setMarkRentDialog] = useState<{ open: boolean; payment: Payment | null }>({ open: false, payment: null });
 
   const { data: payments, isLoading } = useQuery({
     queryKey: ["owner-payments", user?.id],
