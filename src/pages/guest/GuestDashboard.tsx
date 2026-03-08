@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { PhotoGallery } from '@/components/guest/PhotoGallery';
 import { HouseRules } from '@/components/guest/HouseRules';
 import { Announcements } from '@/components/guest/Announcements';
+import { GuestChatbot } from '@/components/guest/GuestChatbot';
 import { RentDueAlert } from '@/components/guest/RentDueAlert';
 import { OnboardingTutorial } from '@/components/onboarding/OnboardingTutorial';
 import { useOnboarding } from '@/hooks/useOnboarding';
@@ -287,6 +288,7 @@ export default function GuestDashboard() {
           roomNumber={guest?.bed?.room?.room_number}
         />
       </div>
+      <GuestChatbot />
     </DashboardLayout>
   );
 }
