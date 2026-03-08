@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle, XCircle, Clock, Image, User, Phone, AlertTriangle, Filter, Search, ArrowUpDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { format } from "date-fns";
 
 interface Payment {
@@ -38,6 +39,7 @@ const PaymentVerification = () => {
   const [statusFilter, setStatusFilter] = useState<PaymentStatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'name'>('date');
+  const [markRentDialog, setMarkRentDialog] = useState<{ open: boolean; payment: Payment | null }>({ open: false, payment: null });
 
   const { data: payments, isLoading } = useQuery({
     queryKey: ["owner-payments", user?.id],
@@ -65,6 +67,20 @@ const PaymentVerification = () => {
     enabled: !!user,
   });
 
+  // Realtime subscription for instant updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('payment-verification-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'manual_payments' }, () => {
+        queryClient.invalidateQueries({ queryKey: ["owner-payments"] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   const updatePaymentMutation = useMutation({
     mutationFn: async ({ id, status, reason }: { id: string; status: string; reason?: string }) => {
       const updateData: any = {
@@ -83,6 +99,16 @@ const PaymentVerification = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["owner-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-payments"] });
+      
+      if (variables.status === "verified") {
+        // Find the payment to offer auto-marking rent
+        const payment = payments?.find(p => p.id === variables.id);
+        if (payment && payment.payment_purpose === "rent") {
+          setMarkRentDialog({ open: true, payment });
+        }
+      }
+      
       toast({
         title: variables.status === "verified" ? "Payment Verified" : "Payment Rejected",
         description: `Payment has been ${variables.status} successfully`,
@@ -95,6 +121,43 @@ const PaymentVerification = () => {
         description: error.message,
         variant: "destructive",
       });
+    },
+  });
+
+  const markRentPaidMutation = useMutation({
+    mutationFn: async (payment: Payment) => {
+      // Find matching pending rent for this guest in the payment month
+      const paymentMonth = payment.created_at ? format(new Date(payment.created_at), 'yyyy-MM') : format(new Date(), 'yyyy-MM');
+      
+      const { data: matchingRents, error: fetchError } = await supabase
+        .from("rents")
+        .select("id")
+        .eq("guest_id", payment.guest_id)
+        .eq("status", "pending")
+        .gte("month", `${paymentMonth}-01`)
+        .lte("month", `${paymentMonth}-31`)
+        .limit(1);
+
+      if (fetchError) throw fetchError;
+
+      if (matchingRents && matchingRents.length > 0) {
+        const { error } = await supabase
+          .from("rents")
+          .update({ status: "paid", paid_date: new Date().toISOString().split("T")[0] })
+          .eq("id", matchingRents[0].id);
+        if (error) throw error;
+      } else {
+        throw new Error("No matching pending rent found for this month");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rents"] });
+      setMarkRentDialog({ open: false, payment: null });
+      toast({ title: "Rent Marked as Paid", description: "The matching rent entry has been updated" });
+    },
+    onError: (error: any) => {
+      setMarkRentDialog({ open: false, payment: null });
+      toast({ title: "Could not auto-mark rent", description: error.message, variant: "destructive" });
     },
   });
 
@@ -426,6 +489,23 @@ const PaymentVerification = () => {
           );
         })()}
       </div>
+
+      {/* Auto-mark rent as paid confirmation */}
+      <ConfirmationDialog
+        open={markRentDialog.open}
+        onOpenChange={(open) => {
+          if (!open) setMarkRentDialog({ open: false, payment: null });
+        }}
+        title="Mark Rent as Paid?"
+        description={`Payment of ₹${markRentDialog.payment?.amount?.toLocaleString() || 0} from ${markRentDialog.payment?.guest?.full_name || 'guest'} has been verified. Would you like to automatically mark the matching rent entry as paid?`}
+        confirmText="Yes, Mark Paid"
+        cancelText="No, Skip"
+        onConfirm={() => {
+          if (markRentDialog.payment) {
+            markRentPaidMutation.mutate(markRentDialog.payment);
+          }
+        }}
+      />
     </DashboardLayout>
   );
 };

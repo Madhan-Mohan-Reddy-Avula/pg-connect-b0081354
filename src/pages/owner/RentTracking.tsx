@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -108,6 +108,25 @@ export default function RentTracking() {
     },
     enabled: !!pg?.id,
   });
+
+  // Realtime subscriptions for instant updates
+  useEffect(() => {
+    if (!pg?.id) return;
+
+    const channel = supabase
+      .channel('owner-rent-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'manual_payments', filter: `pg_id=eq.${pg.id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['pending-payments', pg.id] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rents' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['rents', pg.id] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [pg?.id, queryClient]);
 
   const addRentMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
