@@ -60,6 +60,34 @@ export default function ExpensesManagement() {
     category: 'other',
     expense_month: format(new Date(), 'yyyy-MM'),
   });
+  const [aiSuggesting, setAiSuggesting] = useState(false);
+  const [aiSuggested, setAiSuggested] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const suggestCategory = useCallback(async (title: string) => {
+    if (title.trim().length < 3) return;
+    setAiSuggesting(true);
+    try {
+      const resp = await supabase.functions.invoke('categorize-expense', {
+        body: { title },
+      });
+      if (resp.data?.category && resp.data.category !== 'other') {
+        setFormData(prev => ({ ...prev, category: resp.data.category }));
+        setAiSuggested(true);
+        setTimeout(() => setAiSuggested(false), 3000);
+      }
+    } catch {
+      // silently fail - category stays as user's choice
+    } finally {
+      setAiSuggesting(false);
+    }
+  }, []);
+
+  const handleTitleChange = useCallback((newTitle: string) => {
+    setFormData(prev => ({ ...prev, title: newTitle }));
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => suggestCategory(newTitle), 600);
+  }, [suggestCategory]);
 
   // Fetch owner's PG
   const { data: pg } = useQuery({
