@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Receipt, Edit2, Trash2, IndianRupee, Calendar, TrendingDown, Image as ImageIcon, ArrowUpDown } from 'lucide-react';
+import { Plus, Receipt, Edit2, Trash2, IndianRupee, Calendar, TrendingDown, Image as ImageIcon, ArrowUpDown, Sparkles, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ImageUpload } from '@/components/ui/image-upload';
 
