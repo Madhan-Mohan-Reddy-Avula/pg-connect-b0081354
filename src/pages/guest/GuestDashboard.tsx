@@ -288,6 +288,7 @@ export default function GuestDashboard() {
           roomNumber={guest?.bed?.room?.room_number}
         />
       </div>
+      <GuestChatbot />
     </DashboardLayout>
   );
 }
