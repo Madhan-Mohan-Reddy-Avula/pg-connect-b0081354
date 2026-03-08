@@ -489,6 +489,23 @@ const PaymentVerification = () => {
           );
         })()}
       </div>
+
+      {/* Auto-mark rent as paid confirmation */}
+      <ConfirmationDialog
+        open={markRentDialog.open}
+        onOpenChange={(open) => {
+          if (!open) setMarkRentDialog({ open: false, payment: null });
+        }}
+        title="Mark Rent as Paid?"
+        description={`Payment of ₹${markRentDialog.payment?.amount?.toLocaleString() || 0} from ${markRentDialog.payment?.guest?.full_name || 'guest'} has been verified. Would you like to automatically mark the matching rent entry as paid?`}
+        confirmText="Yes, Mark Paid"
+        cancelText="No, Skip"
+        onConfirm={() => {
+          if (markRentDialog.payment) {
+            markRentPaidMutation.mutate(markRentDialog.payment);
+          }
+        }}
+      />
     </DashboardLayout>
   );
 };
