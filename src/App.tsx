@@ -8,7 +8,9 @@ import { ManagerProvider } from "@/contexts/ManagerContext";
 import { SplashScreen } from "@/components/SplashScreen";
 
 import NotFound from "./pages/NotFound";
-import Auth from "./pages/Auth";
+import RoleChooser from "./pages/RoleChooser";
+import OwnerAuth from "./pages/OwnerAuth";
+import GuestAuth from "./pages/GuestAuth";
 import OwnerDashboard from "./pages/owner/OwnerDashboard";
 import OwnerAnalytics from "./pages/owner/OwnerAnalytics";
 import PGSetup from "./pages/owner/PGSetup";
@@ -42,7 +44,7 @@ function ProtectedRoute({ children, allowedRole }: { children: React.ReactNode; 
   }
   
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to={allowedRole === 'owner' ? '/owner/auth' : '/guest/auth'} replace />;
   }
   
   if (role !== allowedRole) {
@@ -63,7 +65,23 @@ function AuthRedirect() {
     return <Navigate to={role === 'owner' ? '/owner' : '/guest'} replace />;
   }
   
-  return <Auth />;
+  return <RoleChooser />;
+}
+
+function OwnerAuthRedirect() {
+  const { user, role, loading } = useAuth();
+  if (loading) return <SplashScreen />;
+  if (user && role === 'owner') return <Navigate to="/owner" replace />;
+  if (user && role === 'guest') return <Navigate to="/guest" replace />;
+  return <OwnerAuth />;
+}
+
+function GuestAuthRedirect() {
+  const { user, role, loading } = useAuth();
+  if (loading) return <SplashScreen />;
+  if (user && role === 'guest') return <Navigate to="/guest" replace />;
+  if (user && role === 'owner') return <Navigate to="/owner" replace />;
+  return <GuestAuth />;
 }
 
 function AppRoutes() {
@@ -71,6 +89,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<AuthRedirect />} />
       <Route path="/auth" element={<AuthRedirect />} />
+      <Route path="/owner/auth" element={<OwnerAuthRedirect />} />
+      <Route path="/guest/auth" element={<GuestAuthRedirect />} />
       
       {/* Owner Routes */}
       <Route path="/owner" element={<ProtectedRoute allowedRole="owner"><OwnerDashboard /></ProtectedRoute>} />
