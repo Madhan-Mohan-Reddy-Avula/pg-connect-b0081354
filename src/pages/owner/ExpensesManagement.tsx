@@ -286,14 +286,28 @@ export default function ExpensesManagement() {
                   <Input
                     id="title"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) => handleTitleChange(e.target.value)}
                     placeholder="e.g., Electricity Bill"
                     className="bg-secondary/50 border-border"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
+                  <Label htmlFor="category" className="flex items-center gap-2">
+                    Category
+                    {aiSuggesting && (
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        AI suggesting...
+                      </span>
+                    )}
+                    {aiSuggested && !aiSuggesting && (
+                      <span className="inline-flex items-center gap-1 text-xs text-primary">
+                        <Sparkles className="w-3 h-3" />
+                        AI suggested
+                      </span>
+                    )}
+                  </Label>
                   <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
                     <SelectTrigger className="bg-secondary/50 border-border">
                       <SelectValue placeholder="Select category" />
